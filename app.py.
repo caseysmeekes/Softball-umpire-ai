@@ -1,11 +1,82 @@
 import streamlit as st
 import cv2
 import numpy as np
+import pandas as pd
+import tempfile
+from PIL import Image
 
-st.title("Umpire App Test")
-st.write("If you can see this, the Python file is working!")
+# --- PAGE SETUP ---
+st.set_page_config(page_title="Umpire Pro AI", layout="wide")
+st.title("🥎 Umpire Pro: AI Strike Zone & Analytics")
 
-uploaded_file = st.file_uploader("Upload a video to test OpenCV", type=["mp4"])
+# --- SIDEBAR: CALIBRATION ---
+st.sidebar.header("1. Strike Zone Calibration")
+st_top = st.sidebar.slider("Zone Top (Shoulders)", 0, 1000, 200)
+st_bot = st.sidebar.slider("Zone Bottom (Knees)", 0, 1000, 600)
+
+st.sidebar.subheader("Perspective (Warp)")
+tl = st.sidebar.slider("Top-Left Width", 0, 1000, 400)
+tr = st.sidebar.slider("Top-Right Width", 0, 1000, 600)
+bl = st.sidebar.slider("Bottom-Left Width", 0, 1000, 350)
+br = st.sidebar.slider("Bottom-Right Width", 0, 1000, 650)
+
+st.sidebar.header("2. AI Sensitivity")
+min_area = st.sidebar.slider("Min Ball Size", 10, 500, 50)
+circ_threshold = st.sidebar.slider("Circularity (1.0 = Perfect Circle)", 0.0, 1.0, 0.6)
+
+# --- APP LOGIC ---
+uploaded_file = st.file_uploader("Upload Game Footage (MP4/MOV)", type=["mp4", "mov"])
 
 if uploaded_file:
-    st.success("Video uploaded successfully!")
+    tfile = tempfile.NamedTemporaryFile(delete=False) 
+    tfile.write(uploaded_file.read())
+    cap = cv2.VideoCapture(tfile.name)
+    
+    width  = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    heatmap_canvas = np.zeros((height, width, 3), dtype=np.uint8)
+    st_frame = st.empty()
+    
+    pitch_data = []
+
+    if st.button('🚀 Start Full Analysis'):
+        frame_num = 0
+        while cap.isOpened():
+            ret, frame = cap.read()
+            if not ret: break
+            frame_num += 1
+
+            zone_pts = np.array([[tl, st_top], [tr, st_top], [br, st_bot], [bl, st_bot]], np.int32)
+
+            hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+            mask = cv2.inRange(hsv, np.array([25, 80, 80]), np.array([45, 255, 255]))
+            contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+            for cnt in contours:
+                area = cv2.contourArea(cnt)
+                if area > min_area:
+                    perimeter = cv2.arcLength(cnt, True)
+                    if perimeter == 0: continue
+                    circularity = 4 * np.pi * (area / (perimeter * perimeter))
+
+                    if circularity > circ_threshold:
+                        (x, y), radius = cv2.minEnclosingCircle(cnt)
+                        center = (int(x), int(y))
+                        res = cv2.pointPolygonTest(zone_pts, center, False)
+                        call = "STRIKE" if res >= 0 else "BALL"
+                        color = (0, 255, 0) if res >= 0 else (0, 0, 255)
+
+                        pitch_data.append({"Frame": frame_num, "X": center[0], "Y": center[1], "Call": call})
+                        cv2.circle(frame, center, int(radius), color, 3)
+                        cv2.circle(heatmap_canvas, center, 6, color, -1)
+
+            cv2.polylines(frame, [zone_pts], True, (255, 255, 255), 2)
+            st_frame.image(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB), channels="RGB")
+
+        st.divider()
+        st.header("📊 Final Report")
+        if pitch_data:
+            df = pd.DataFrame(pitch_data)
+            st.image(cv2.cvtColor(heatmap_canvas, cv2.COLOR_BGR2RGB))
+            csv = df.to_csv(index=False).encode('utf-8')
+            st.download_button("Download Excel Log", csv, "report.csv", "text/csv")
