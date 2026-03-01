@@ -1,0 +1,11 @@
+import streamlit as st
+import cv2
+import numpy as np
+
+st.title("Umpire App Test")
+st.write("If you can see this, the Python file is working!")
+
+uploaded_file = st.file_uploader("Upload a video to test OpenCV", type=["mp4"])
+
+if uploaded_file:
+    st.success("Video uploaded successfully!")
