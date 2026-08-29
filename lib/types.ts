@@ -29,7 +29,7 @@ export type Assignment = {
 
 export type Violation = {
   umpireId: string
-  rule: 'MAX_GAMES' | 'BACK_TO_BACK' | 'PLATE_BREAK' | 'PLATE_BALANCE'
+  rule: 'MAX_GAMES' | 'BACK_TO_BACK' | 'PLATE_BREAK' | 'PLATE_BALANCE' | 'NO_DOUBLE_BOOKING' | 'ONE_PLATE'
   severity: 'hard' | 'soft'
   message: string
   gameId?: string
