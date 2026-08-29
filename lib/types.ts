@@ -1,4 +1,5 @@
 export type Position = 'Plate' | 'Base' | 'Base 1' | 'Base 2' | 'Base 3'
+export type Experience = 'International' | 'National' | 'Regional' | 'Developing'
 
 export type Game = {
   id: string
@@ -17,7 +18,7 @@ export type Umpire = {
   name: string
   availability: string
   maxGames: number
-  experience: 'International' | 'National' | 'Regional' | 'Developing'
+  experience: Experience
 }
 
 export type Assignment = {
@@ -28,7 +29,8 @@ export type Assignment = {
 
 export type Violation = {
   umpireId: string
-  rule: 'MAX_GAMES' | 'BACK_TO_BACK' | 'PLATE_BREAK'
+  rule: 'MAX_GAMES' | 'BACK_TO_BACK' | 'PLATE_BREAK' | 'PLATE_BALANCE'
+  severity: 'hard' | 'soft'
   message: string
   gameId?: string
 }
