@@ -1,5 +1,6 @@
 'use client'
 import {useEffect,useState} from 'react'
+import './rules.css'
 import {TOURNAMENT_RULES,DEFAULT_RULE_IDS} from '../../lib/tournament-rules'
 export default function RulesPage(){
  const [enabled,setEnabled]=useState<string[]>(DEFAULT_RULE_IDS); const [saved,setSaved]=useState(false)
