@@ -1,79 +1,50 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { ChangeEvent, useEffect, useMemo, useState } from 'react'
 import { allocate, validateUmpire } from '../lib/rules'
 import { Assignment, Game, Position, Umpire } from '../lib/types'
 
-const seedGames: Game[] = [
-  { id: 'g1', number: 1, date: '2026-08-30', start: '09:00', end: '10:20', field: 'Field 1', teams: 'NZ vs Australia', division: 'Senior Women', positions: ['Plate', 'Base'] },
-  { id: 'g2', number: 2, date: '2026-08-30', start: '10:30', end: '11:50', field: 'Field 1', teams: 'Japan vs USA', division: 'Senior Women', positions: ['Plate', 'Base'] },
-  { id: 'g3', number: 3, date: '2026-08-30', start: '12:00', end: '13:20', field: 'Field 1', teams: 'Canada vs Mexico', division: 'Senior Women', positions: ['Plate', 'Base'] },
-  { id: 'g4', number: 4, date: '2026-08-30', start: '13:30', end: '14:50', field: 'Field 1', teams: 'Australia vs Japan', division: 'Senior Women', positions: ['Plate', 'Base'] },
-  { id: 'g5', number: 5, date: '2026-08-30', start: '15:00', end: '16:20', field: 'Field 1', teams: 'USA vs NZ', division: 'Senior Women', positions: ['Plate', 'Base'] },
-  { id: 'g6', number: 6, date: '2026-08-30', start: '16:30', end: '17:50', field: 'Field 1', teams: 'Mexico vs Canada', division: 'Senior Women', positions: ['Plate', 'Base'] },
+const DEFAULT_GAMES: Game[] = [
+ {id:'g1',number:1,date:'2026-08-30',start:'09:00',end:'10:20',field:'Field 1',teams:'NZ vs Australia',division:'Senior Women',positions:['Plate','Base']},
+ {id:'g2',number:2,date:'2026-08-30',start:'10:30',end:'11:50',field:'Field 1',teams:'Japan vs USA',division:'Senior Women',positions:['Plate','Base']},
+ {id:'g3',number:3,date:'2026-08-30',start:'12:00',end:'13:20',field:'Field 1',teams:'Canada vs Mexico',division:'Senior Women',positions:['Plate','Base']},
+ {id:'g4',number:4,date:'2026-08-30',start:'13:30',end:'14:50',field:'Field 1',teams:'Australia vs Japan',division:'Senior Women',positions:['Plate','Base']},
+ {id:'g5',number:5,date:'2026-08-30',start:'15:00',end:'16:20',field:'Field 1',teams:'USA vs NZ',division:'Senior Women',positions:['Plate','Base']},
+ {id:'g6',number:6,date:'2026-08-30',start:'16:30',end:'17:50',field:'Field 1',teams:'Mexico vs Canada',division:'Senior Women',positions:['Plate','Base']}
 ]
-
-const seedUmpires: Umpire[] = [
-  { id: 'u1', name: 'Smith', availability: 'All day', maxGames: 3, experience: 'International' },
-  { id: 'u2', name: 'Jones', availability: 'All day', maxGames: 3, experience: 'National' },
-  { id: 'u3', name: 'Brown', availability: 'All day', maxGames: 3, experience: 'National' },
-  { id: 'u4', name: 'Wilson', availability: 'All day', maxGames: 3, experience: 'Regional' },
-  { id: 'u5', name: 'Taylor', availability: 'All day', maxGames: 3, experience: 'Developing' },
+const DEFAULT_UMPires: Umpire[] = [
+ {id:'u1',name:'Smith',availability:'All day',maxGames:3,experience:'International'},
+ {id:'u2',name:'Jones',availability:'All day',maxGames:3,experience:'National'},
+ {id:'u3',name:'Brown',availability:'All day',maxGames:3,experience:'National'},
+ {id:'u4',name:'Wilson',availability:'All day',maxGames:3,experience:'Regional'}
 ]
+const POSITIONS: Position[] = ['Plate','Base 1','Base 2','Base 3']
 
-export default function Home() {
-  const [games, setGames] = useState(seedGames)
-  const [umpires, setUmpires] = useState(seedUmpires)
-  const [assignments, setAssignments] = useState<Assignment[]>([])
-  const [tab, setTab] = useState<'schedule' | 'umpires'>('schedule')
-  const [message, setMessage] = useState('Ready to allocate')
+function read(key:string, fallback:any) { if(typeof window==='undefined') return fallback; try{return JSON.parse(localStorage.getItem(key)||'null')||fallback}catch{return fallback} }
+function csvRows(text:string) { return text.trim().split(/\r?\n/).map(r=>r.split(',').map(x=>x.trim().replace(/^"|"$/g,''))) }
 
-  const violations = useMemo(() => umpires.flatMap(u => validateUmpire(u, games, assignments)), [umpires, games, assignments])
-  const stats = useMemo(() => ({ assigned: new Set(assignments.map(a => a.gameId)).size, slots: games.reduce((n, g) => n + g.positions.length, 0), violations: violations.length }), [assignments, games, violations])
-
-  const runAllocation = () => {
-    const result = allocate(games, umpires)
-    setAssignments(result.assignments)
-    setMessage(result.unallocated.length ? `${result.unallocated.length} assignment(s) could not be allocated.` : 'Allocation complete and valid.')
-  }
-
-  const assignmentFor = (gameId: string, position: Position) => {
-    const a = assignments.find(x => x.gameId === gameId && x.position === position)
-    return a ? umpires.find(u => u.id === a.umpireId)?.name : 'Unallocated'
-  }
-
-  const swapAssignment = (game: Game, position: Position, value: string) => {
-    const remaining = assignments.filter(a => !(a.gameId === game.id && a.position === position))
-    if (value !== '') remaining.push({ gameId: game.id, umpireId: value, position })
-    setAssignments(remaining)
-    setMessage('Manual change saved. Check any warnings before publishing.')
-  }
-
-  return <main>
-    <header className="topbar">
-      <div><div className="brand">DIAMOND <span>•</span> OFFICIATING</div><h1>Umpire Allocation</h1></div>
-      <div className="header-actions"><span className="pill">SAT 30 AUG 2026</span><button className="secondary" onClick={() => window.print()}>Print / Export</button><button className="primary" onClick={runAllocation}>⚡ Auto Allocate</button></div>
-    </header>
-
-    <section className="hero">
-      <div><p className="eyebrow">TOURNAMENT CONTROL</p><h2>Allocation Dashboard</h2><p>Rules-first scheduling for fair, valid umpire assignments.</p></div>
-      <div className="status"><span className={violations.length ? 'dot warn' : 'dot'}></span>{message}</div>
-    </section>
-
-    <section className="metrics">
-      <div><span>GAMES</span><strong>{games.length}</strong><small>Scheduled today</small></div>
-      <div><span>UMPIRES</span><strong>{umpires.length}</strong><small>Available today</small></div>
-      <div><span>ALLOCATED</span><strong>{stats.assigned}<em>/{games.length}</em></strong><small>Games with assignments</small></div>
-      <div className={violations.length ? 'danger' : ''}><span>RULE CHECKS</span><strong>{violations.length}</strong><small>{violations.length ? 'Issues require attention' : 'All rules satisfied'}</small></div>
-    </section>
-
-    <nav className="tabs"><button className={tab === 'schedule' ? 'active' : ''} onClick={() => setTab('schedule')}>Game Schedule</button><button className={tab === 'umpires' ? 'active' : ''} onClick={() => setTab('umpires')}>Umpire Workload</button></nav>
-
-    {tab === 'schedule' ? <section className="card"><div className="card-head"><div><h3>Game Schedule</h3><p>Chronological allocation with live rule validation</p></div><div className="legend"><span>🟢 Valid</span><span>🟠 Warning</span><span>🔴 Violation</span></div></div><div className="table-wrap"><table><thead><tr><th>GAME</th><th>TIME</th><th>FIELD</th><th>TEAMS / DIVISION</th><th>PLATE</th><th>BASE</th><th>STATUS</th></tr></thead><tbody>{games.map(g => { const va = violations.filter(v => v.gameId === g.id); return <tr key={g.id}><td><b>#{g.number}</b></td><td>{g.start}<small>– {g.end}</small></td><td>{g.field}</td><td><b>{g.teams}</b><small>{g.division}</small></td>{(['Plate','Base'] as Position[]).map(p => <td key={p}><select value={assignments.find(a => a.gameId === g.id && a.position === p)?.umpireId || ''} onChange={e => swapAssignment(g,p,e.target.value)}><option value="">Unallocated</option>{umpires.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}</select></td>)}<td><span className={va.length ? 'badge bad' : assignments.filter(a => a.gameId === g.id).length === g.positions.length ? 'badge good' : 'badge warn'}>{va.length ? 'Violation' : assignments.filter(a => a.gameId === g.id).length === g.positions.length ? 'Valid' : 'Open'}</span></td></tr>})}</tbody></table></div></section> : <section className="card"><div className="card-head"><div><h3>Umpire Workload</h3><p>Daily workload, positioning and next assignment</p></div></div><div className="table-wrap"><table><thead><tr><th>UMPIRE</th><th>GAMES</th><th>PLATE</th><th>BASE</th><th>NEXT GAME</th><th>STATUS</th></tr></thead><tbody>{umpires.map(u => { const mine = assignments.filter(a => a.umpireId === u.id); const plates = mine.filter(a => a.position === 'Plate').length; const bases = mine.filter(a => a.position === 'Base').length; const v = violations.filter(x => x.umpireId === u.id); const next = games.find(g => g.number > Math.max(0,...mine.map(a => games.find(x => x.id === a.gameId)?.number || 0)) && !mine.some(a => a.gameId === g.id)); return <tr key={u.id}><td><b>{u.name}</b><small>{u.experience}</small></td><td><b>{mine.length}/{u.maxGames}</b></td><td>{plates}</td><td>{bases}</td><td>{next ? `Game ${next.number}` : '—'}</td><td><span className={v.length ? 'badge bad' : mine.length >= u.maxGames ? 'badge warn' : 'badge good'}>{v.length ? 'Rule violation' : mine.length >= u.maxGames ? 'Max reached' : plates && next ? 'Break required' : 'Available'}</span></td></tr>})}</tbody></table></div></section>}
-
-    <section className="rules"><div><p className="eyebrow">RULE ENGINE</p><h3>Rules are evaluated before allocation</h3><p>The scheduler prioritises validity first, then fairness and balanced workload.</p></div><div className="rule-list"><article><strong>01</strong><div><b>Maximum 3 games</b><span>No umpire can be allocated a fourth game.</span></div></article><article><strong>02</strong><div><b>Back-to-back = Base → Plate</b><span>Consecutive games must move from Base to Plate.</span></div></article><article><strong>03</strong><div><b>Plate requires a break</b><span>At least one game off after every Plate assignment.</span></div></article></div></section>
-
-    {violations.length > 0 && <section className="alerts"><h3>Attention required</h3>{violations.map((v,i) => <div key={i}>🔴 <b>{umpires.find(u => u.id === v.umpireId)?.name}</b> · {v.message}</div>)}</section>}
-    <footer>DIAMOND OFFICIATING · Rules-first tournament scheduling</footer>
-  </main>
+export default function Home(){
+ const [games,setGames]=useState<Game[]>(DEFAULT_GAMES), [umpires,setUmpires]=useState<Umpire[]>(DEFAULT_UMPires), [assignments,setAssignments]=useState<Assignment[]>([])
+ const [view,setView]=useState<'dashboard'|'schedule'|'umpires'>('dashboard'), [notice,setNotice]=useState('Ready to allocate')
+ const [gameForm,setGameForm]=useState({date:'2026-08-30',start:'09:00',end:'10:20',field:'Field 1',teams:'',division:'',crew:2})
+ const [umpForm,setUmpForm]=useState({name:'',availability:'All day',maxGames:3,experience:'National' as Umpire['experience']})
+ useEffect(()=>{setGames(read('softball-games',DEFAULT_GAMES));setUmpires(read('softball-umpires',DEFAULT_UMPires));setAssignments(read('softball-assignments',[]))},[])
+ useEffect(()=>{localStorage.setItem('softball-games',JSON.stringify(games))},[games]); useEffect(()=>{localStorage.setItem('softball-umpires',JSON.stringify(umpires))},[umpires]); useEffect(()=>{localStorage.setItem('softball-assignments',JSON.stringify(assignments))},[assignments])
+ const violations=useMemo(()=>umpires.flatMap(u=>validateUmpire(u,games,assignments)),[umpires,games,assignments])
+ const assignedGames=(u:string)=>new Set(assignments.filter(a=>a.umpireId===u).map(a=>a.gameId)).size
+ const nameOf=(id:string)=>umpires.find(u=>u.id===id)?.name||'Unallocated'
+ const assign=(game:Game,position:Position,value:string)=>{const trial=assignments.filter(a=>!(a.gameId===game.id&&a.position===position));if(value){trial.push({gameId:game.id,umpireId:value,position});const u=umpires.find(x=>x.id===value)!;const v=validateUmpire(u,games,trial);if(v.length){const ok=window.confirm(`Override Rule?\n\n${v[0].message}\n\nThis will leave a rule violation visible on the dashboard.`);if(!ok)return}}setAssignments(trial);setNotice('Manual allocation saved. Validation updated.')}
+ const auto=()=>{const r=allocate(games,umpires);setAssignments(r.assignments);setNotice(r.unallocated.length?`${r.unallocated.length} slot(s) could not be allocated. See Open games.`:'Allocation complete. All allocated slots pass the rules.')}
+ const addGame=()=>{const n=Math.max(0,...games.map(g=>g.number))+1;const positions:Position[]=gameForm.crew===2?['Plate','Base']:gameForm.crew===3?['Plate','Base 1','Base 2']:['Plate','Base 1','Base 2','Base 3'];setGames([...games,{id:`g${Date.now()}`,number:n,...gameForm,positions}]);setGameForm({...gameForm,teams:'',division:''});setNotice('Game added.')}
+ const addUmpire=()=>{if(!umpForm.name.trim())return;setUmpires([...umpires,{...umpForm,id:`u${Date.now()}`}]);setUmpForm({...umpForm,name:''});setNotice('Umpire added.')}
+ const importCSV=(e:ChangeEvent<HTMLInputElement>)=>{const file=e.target.files?.[0];if(!file)return;const reader=new FileReader();reader.onload=()=>{const rows=csvRows(String(reader.result));const header=rows.shift()!.map(x=>x.toLowerCase());const idx=(names:string[])=>names.map(n=>header.indexOf(n)).find(i=>i>=0)??-1;const get=(r:string[],names:string[])=>r[idx(names)]||'';const imported=rows.filter(r=>r.length>1).map((r,i)=>{const pos=get(r,['positions','position']).split(/[+;|]/).map(x=>x.trim()).filter(Boolean) as Position[];return{id:`import-${Date.now()}-${i}`,number:Number(get(r,['game','game number']))||i+1,date:get(r,['date'])||gameForm.date,start:get(r,['start','start time']),end:get(r,['end','end time']),field:get(r,['field']),teams:get(r,['teams','match']),division:get(r,['division','competition']),positions:pos.length?pos:['Plate','Base']}});setGames(imported);setAssignments([]);setNotice(`${imported.length} games imported.`)};reader.readAsText(file)}
+ const exportCSV=()=>{const headers='Game,Date,Start,End,Field,Teams,Division,Plate,Base 1,Base 2,Base 3';const rows=games.map(g=>[g.number,g.date,g.start,g.end,g.field,g.teams,g.division,...POSITIONS.map(p=>nameOf(assignments.find(a=>a.gameId===g.id&&a.position===p)?.umpireId||''))].join(','));const blob=new Blob([headers+'\n'+rows.join('\n')],{type:'text/csv'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='umpire-allocation.csv';a.click()}
+ const scheduleTable=<section className="card"><div className="card-head"><div><h3>Game Schedule</h3><p>Chronological schedule with live rule validation</p></div><div className="legend"><span>🟢 Valid</span><span>🟠 Open</span><span>🔴 Violation</span></div></div><div className="table-wrap"><table><thead><tr><th>GAME</th><th>TIME</th><th>FIELD</th><th>TEAMS / DIVISION</th>{(games[0]?.positions||['Plate','Base']).map(p=><th key={p}>{p.toUpperCase()}</th>)}<th>STATUS</th></tr></thead><tbody>{games.map(g=>{const gv=violations.filter(v=>v.gameId===g.id),complete=g.positions.every(p=>assignments.some(a=>a.gameId===g.id&&a.position===p));return <tr key={g.id}><td><b>#{g.number}</b></td><td>{g.start}<small>– {g.end}</small></td><td>{g.field}</td><td><b>{g.teams}</b><small>{g.division}</small></td>{g.positions.map(p=><td key={p}><select value={assignments.find(a=>a.gameId===g.id&&a.position===p)?.umpireId||''} onChange={e=>assign(g,p,e.target.value)}><option value="">Unallocated</option>{umpires.map(u=><option key={u.id} value={u.id}>{u.name}</option>)}</select></td>)}<td><span className={`badge ${gv.length?'bad':complete?'good':'warn'}`}>{gv.length?'Violation':complete?'Valid':'Open'}</span></td></tr>})}</tbody></table></div></section>
+ const workload=<section className="card"><div className="card-head"><div><h3>Umpire Workload</h3><p>Daily workload, positioning and rule status</p></div></div><div className="table-wrap"><table><thead><tr><th>UMPIRE</th><th>GAMES</th><th>PLATE</th><th>BASE</th><th>STATUS</th></tr></thead><tbody>{umpires.map(u=>{const mine=assignments.filter(a=>a.umpireId===u.id),plates=mine.filter(a=>a.position==='Plate').length,v=violations.filter(x=>x.umpireId===u.id);return <tr key={u.id}><td><b>{u.name}</b><small>{u.experience} · {u.availability}</small></td><td><b>{assignedGames(u.id)}/{u.maxGames}</b></td><td>{plates}</td><td>{mine.filter(a=>a.position!=='Plate').length}</td><td><span className={`badge ${v.length?'bad':assignedGames(u.id)>=u.maxGames?'warn':'good'}`}>{v.length?'Rule violation':assignedGames(u.id)>=u.maxGames?'Max reached':'Available'}</span></td></tr>})}</tbody></table></div></section>
+ return <main><header className="topbar"><div><div className="brand">DIAMOND <span>•</span> OFFICIATING</div><h1>Umpire Allocation</h1></div><div className="header-actions"><span className="pill">TOURNAMENT CONTROL</span><button className="secondary" onClick={exportCSV}>Export CSV</button><button className="primary" onClick={auto}>⚡ Auto Allocate</button></div></header>
+ <nav className="mainnav"><button className={view==='dashboard'?'active':''} onClick={()=>setView('dashboard')}>Dashboard</button><button className={view==='schedule'?'active':''} onClick={()=>setView('schedule')}>Build / Upload Schedule</button><button className={view==='umpires'?'active':''} onClick={()=>setView('umpires')}>Umpires</button></nav>
+ {view==='dashboard'&&<><section className="hero"><div><p className="eyebrow">TOURNAMENT CONTROL</p><h2>Allocation Dashboard</h2><p>Rules-first scheduling. Validity comes before filling every slot.</p></div><div className="status"><span className={violations.length?'dot warn':'dot'}></span>{notice}</div></section><section className="metrics"><div><span>GAMES</span><strong>{games.length}</strong><small>Scheduled</small></div><div><span>UMPIRES</span><strong>{umpires.length}</strong><small>Available in roster</small></div><div><span>ALLOCATED</span><strong>{new Set(assignments.map(a=>a.gameId)).size}<em>/{games.length}</em></strong><small>Games with at least one slot</small></div><div className={violations.length?'danger':''}><span>RULE VIOLATIONS</span><strong>{violations.length}</strong><small>{violations.length?'Needs attention':'All clear'}</small></div></section>{scheduleTable}{workload}</>}
+ {view==='schedule'&&<><section className="hero compact"><div><p className="eyebrow">SCHEDULE BUILDER</p><h2>Build or Upload Schedule</h2><p>Upload a CSV or build games manually. Imported schedules replace the current schedule.</p></div></section><section className="builder-grid"><div className="card pad"><h3>Upload CSV</h3><p>Expected columns: Game, Date, Start, End, Field, Teams, Division, Positions.</p><label className="upload">Choose CSV<input type="file" accept=".csv,text/csv" onChange={importCSV}/></label><div className="hint">Positions can be <b>Plate+Base</b>, <b>Plate+Base 1+Base 2</b> or four umpire positions.</div></div><div className="card pad"><h3>Add game</h3><div className="formgrid"><input placeholder="Start" type="time" value={gameForm.start} onChange={e=>setGameForm({...gameForm,start:e.target.value})}/><input placeholder="End" type="time" value={gameForm.end} onChange={e=>setGameForm({...gameForm,end:e.target.value})}/><input placeholder="Field" value={gameForm.field} onChange={e=>setGameForm({...gameForm,field:e.target.value})}/><input placeholder="Teams" value={gameForm.teams} onChange={e=>setGameForm({...gameForm,teams:e.target.value})}/><input placeholder="Division" value={gameForm.division} onChange={e=>setGameForm({...gameForm,division:e.target.value})}/><select value={gameForm.crew} onChange={e=>setGameForm({...gameForm,crew:Number(e.target.value)})}><option value="2">2 umpires</option><option value="3">3 umpires</option><option value="4">4 umpires</option></select></div><button className="primary wide" onClick={addGame}>+ Add Game</button></div></section>{scheduleTable}</>}
+ {view==='umpires'&&<><section className="hero compact"><div><p className="eyebrow">ROSTER MANAGEMENT</p><h2>Umpire Roster</h2><p>Add, edit and remove umpires used by the allocation engine.</p></div></section><section className="card pad"><h3>Add umpire</h3><div className="formgrid umpform"><input placeholder="Full name" value={umpForm.name} onChange={e=>setUmpForm({...umpForm,name:e.target.value})}/><input placeholder="Availability" value={umpForm.availability} onChange={e=>setUmpForm({...umpForm,availability:e.target.value})}/><input type="number" min="1" max="3" value={umpForm.maxGames} onChange={e=>setUmpForm({...umpForm,maxGames:Number(e.target.value)})}/><select value={umpForm.experience} onChange={e=>setUmpForm({...umpForm,experience:e.target.value as Umpire['experience']})}><option>International</option><option>National</option><option>Regional</option><option>Developing</option></select><button className="primary" onClick={addUmpire}>+ Add Umpire</button></div></section><section className="card pad"><h3>Current roster</h3><div className="roster">{umpires.map(u=><div className="roster-row" key={u.id}><div><b>{u.name}</b><small>{u.experience} · {u.availability}</small></div><label>Max <input type="number" min="1" max="3" value={u.maxGames} onChange={e=>setUmpires(umpires.map(x=>x.id===u.id?{...x,maxGames:Number(e.target.value)}:x))}/></label><button className="delete" onClick={()=>{if(confirm(`Remove ${u.name}?`)){setUmpires(umpires.filter(x=>x.id!==u.id));setAssignments(assignments.filter(a=>a.umpireId!==u.id))}}}>Remove</button></div>)}</div></section>{workload}</>}
+ <section className="rules"><div><p className="eyebrow">RULE ENGINE</p><h3>Hard rules are enforced first</h3><p>Manual overrides are never silent. The dashboard keeps the violation visible until corrected.</p></div><div className="rule-list"><article><strong>01</strong><div><b>Maximum 3 games</b><span>A fourth game is rejected by auto allocation.</span></div></article><article><strong>02</strong><div><b>Back-to-back = Base → Plate</b><span>The next scheduled game counts as consecutive even with a short changeover gap.</span></div></article><article><strong>03</strong><div><b>Plate requires a break</b><span>The next scheduled game must be off after Plate.</span></div></article></div></section><footer>DIAMOND OFFICIATING · Rules-first tournament scheduling</footer></main>
 }
