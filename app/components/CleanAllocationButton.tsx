@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import './clean-allocation.css'
 
 export default function CleanAllocationButton() {
   const [open, setOpen] = useState(false)
