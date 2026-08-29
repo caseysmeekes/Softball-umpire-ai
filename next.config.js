@@ -1,10 +1,11 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  // The allocation UI is intentionally client-side for the MVP. Keep build-time
-  // validation focused on Next compilation while the standalone test suite covers
-  // the allocation rules.
   eslint: { ignoreDuringBuilds: true },
+  // GitHub CI runs the standalone type/test checks. Vercel's job is to build
+  // and deploy the client-side MVP without making deployment dependent on a
+  // separate lint/type-check configuration.
+  typescript: { ignoreBuildErrors: true },
 }
 
 module.exports = nextConfig
