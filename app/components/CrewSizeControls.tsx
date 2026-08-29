@@ -12,12 +12,7 @@ export default function CrewSizeControls(){
     const games=JSON.parse(localStorage.getItem('softball-games')||'[]') as any[]
     const assignments=JSON.parse(localStorage.getItem('softball-assignments')||'[]') as any[]
     let changed=false
-    const migratedGames=games.map(game=>{
-      if(!Array.isArray(game.positions))return game
-      const positions=game.positions.map((p:string)=>p==='Base'?'Base 1':p)
-      if(JSON.stringify(positions)!==JSON.stringify(game.positions)){changed=true;return {...game,positions:[...new Set(positions)]}}
-      return game
-    })
+    const migratedGames=games.map(game=>{if(!Array.isArray(game.positions))return game;const positions=game.positions.map((p:string)=>p==='Base'?'Base 1':p);if(JSON.stringify(positions)!==JSON.stringify(game.positions)){changed=true;return {...game,positions:[...new Set(positions)]}}return game})
     const migratedAssignments=assignments.map(a=>a.position==='Base'?{...a,position:'Base 1'}:a)
     if(assignments.some((a,i)=>a.position!==migratedAssignments[i].position))changed=true
     if(changed){localStorage.setItem('softball-games',JSON.stringify(migratedGames));localStorage.setItem('softball-assignments',JSON.stringify(migratedAssignments));window.location.reload();return true}
@@ -25,7 +20,15 @@ export default function CrewSizeControls(){
    return false
   }
   if(migrateLegacyBase())return
-  const enhance=()=>{document.querySelectorAll('tbody tr').forEach(row=>{if(row.querySelector('[data-crew-controls]'))return;const cells=row.querySelectorAll('td');if(cells.length<5)return;const m=(cells[0]?.textContent||'').match(/#(\d+)/);if(!m)return;const games=read<any[]>('softball-games',[]),game=games.find(g=>Number(g.number)===Number(m[1]));if(!game)return;const cell=cells[4],wrap=document.createElement('div');wrap.dataset.crewControls='true';wrap.className='crew-controls';[2,3,4].forEach(size=>{const b=document.createElement('button');b.type='button';b.textContent=String(size);b.className=game.positions?.length===size?'active':'';b.title=`Use a ${size}-umpire crew`;b.onclick=()=>changeCrew(game.id,size);wrap.appendChild(b)});cell.innerHTML='';cell.appendChild(wrap)})}
+  const enhance=()=>{document.querySelectorAll('tbody tr').forEach(row=>{
+   if(row.querySelector('[data-crew-controls]'))return
+   const cells=row.querySelectorAll('td');if(cells.length<5)return
+   const m=(cells[0]?.textContent||'').match(/#(\d+)/);if(!m)return
+   const games=read<any[]>('softball-games',[]),game=games.find(g=>Number(g.number)===Number(m[1]))
+   if(!game){const legacySelect=cells[6]?.querySelector('select');if(legacySelect&&!cells[7]?.querySelector('select'))cells[7].appendChild(legacySelect);return}
+   if(game.positions?.length===2){const legacySelect=cells[6]?.querySelector('select');if(legacySelect&&!cells[7]?.querySelector('select'))cells[7].appendChild(legacySelect)}
+   const cell=cells[4],wrap=document.createElement('div');wrap.dataset.crewControls='true';wrap.className='crew-controls';[2,3,4].forEach(size=>{const b=document.createElement('button');b.type='button';b.textContent=String(size);b.className=game.positions?.length===size?'active':'';b.title=`Use a ${size}-umpire crew`;b.onclick=()=>changeCrew(game.id,size);wrap.appendChild(b)});cell.innerHTML='';cell.appendChild(wrap)
+  })}
   const observer=new MutationObserver(enhance);observer.observe(document.body,{childList:true,subtree:true});enhance();return()=>observer.disconnect()
  },[])
  return null
