@@ -1,4 +1,4 @@
-export type Position = 'Plate' | 'Base'
+export type Position = 'Plate' | 'Base 1' | 'Base 2' | 'Base 3'
 
 export type Game = {
   id: string
