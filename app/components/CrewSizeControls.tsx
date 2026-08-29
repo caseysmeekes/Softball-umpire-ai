@@ -6,6 +6,7 @@ const CREWS:Record<number,Position[]>={2:['Plate','Base 1'],3:['Plate','Base 1',
 
 export default function CrewSizeControls(){
  useEffect(()=>{
+  const style=document.createElement('style');style.id='position-label-fix';style.textContent=`main .card table thead th:nth-child(7),main .card table tbody td:nth-child(7){display:none!important}main .card table thead th:nth-child(8),main .card table thead th:nth-child(9),main .card table thead th:nth-child(10){font-size:0}main .card table thead th:nth-child(8)::after{content:'1ST BASE';font-size:9px}main .card table thead th:nth-child(9)::after{content:'2ND BASE';font-size:9px}main .card table thead th:nth-child(10)::after{content:'3RD BASE';font-size:9px}`;if(!document.getElementById(style.id))document.head.appendChild(style)
   const migrateLegacyBase=()=>{
    try{
     const games=JSON.parse(localStorage.getItem('softball-games')||'[]') as any[]
