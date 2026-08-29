@@ -1,0 +1,36 @@
+name: Wire schedule builder
+
+on:
+  push:
+    paths:
+      - 'app/schedule/page.tsx'
+      - '.github/workflows/wire-schedule-page.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  wire:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Wire schedule navigation
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('app/dashboard/page.tsx')
+          s = p.read_text()
+          old = "<button className={tab==='schedule'?'active':''} onClick={()=>setTab('schedule')}>Build / Upload Schedule</button>"
+          new = "<a className={tab==='schedule'?'active':''} href='/schedule'>Build / Upload Schedule</a>"
+          if old in s:
+              p.write_text(s.replace(old, new))
+          PY
+      - name: Commit navigation wiring
+        run: |
+          if git diff --quiet; then exit 0; fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add app/dashboard/page.tsx
+          git commit -m 'Wire build schedule page into dashboard'
+          git push
