@@ -1,35 +1,28 @@
 # Softball Umpire Allocation Tool
 
-Rules-first tournament scheduling for softball umpires.
+Rules-first tournament scheduling for softball umpire crews.
 
-## MVP
+## MVP features
 
-- Tournament dashboard with chronological game schedule
-- Umpire workload view
+- Dashboard with game schedule and umpire workload
+- Build games manually
+- Import a CSV schedule
+- Export the final allocation to CSV
+- Four-umpire roster included by default
+- Add, edit and remove umpires
+- 2, 3 or 4 umpire game crews
 - Automatic allocation engine
-- Maximum 3 games per day
-- Back-to-back rule: Base → Plate
-- Mandatory game off after Plate
-- Live validation and manual overrides
-- Unallocated game/position reporting
-- Print / export via browser print
-- Responsive desktop, tablet and mobile UI
+- Live validation and manual override warnings
+- Browser local storage for initial tournament persistence
 
-## Allocation priority
+## Allocation rules
 
-**Valid allocation → Fair allocation → Balanced workload**
+1. Maximum 3 games per umpire per day.
+2. A back-to-back assignment must move Base → Plate.
+3. An umpire working Plate must have the next scheduled game off.
 
-The rules are isolated in `lib/rules.ts` so additional tournament rules can be added without rewriting the dashboard.
-
-## Local development
-
-```bash
-npm install
-npm run dev
-```
-
-Open `http://localhost:3000`.
+The engine prioritises valid allocation first, then balanced workload and Plate distribution.
 
 ## Vercel
 
-This is a standard Next.js application and includes `vercel.json` for Vercel framework detection. Connect the `caseysmeekes/Softball-umpire-ai` GitHub repository to a Vercel project to enable automatic deployments from `main`.
+Connect `caseysmeekes/Softball-umpire-ai` to Vercel for automatic deployments from `main`.
