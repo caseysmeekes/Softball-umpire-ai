@@ -2,7 +2,7 @@
 import {useEffect} from 'react'
 
 type Position='Plate'|'Base'|'Base 1'|'Base 2'|'Base 3'
-const CREWS:Record<number,Position[]>={2:['Plate','Base 1'],3:['Plate','Base 1','Base 2'],4:['Plate','Base 1','Base 2','Base 3']}
+const CREWS:Record<number,Position[]>={2:['Plate','Base 1'],3:['Plate','Base 1','Base 3'],4:['Plate','Base 1','Base 2','Base 3']}
 
 export default function CrewSizeControls(){
  useEffect(()=>{
