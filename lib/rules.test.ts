@@ -14,7 +14,12 @@ const a=(gameId:string,position:'Plate'|'Base 1'):Assignment=>({gameId,position,
 describe('allocation rules',()=>{
  it('allows Base -> Plate back-to-back',()=>expect(validateUmpire(umpire,games,[a('g1','Base 1'),a('g2','Plate')])).toHaveLength(0))
  it('rejects Plate -> Base',()=>expect(validateUmpire(umpire,games,[a('g1','Plate'),a('g2','Base 1')]).some(v=>v.rule==='PLATE_BREAK')).toBe(true))
+ it('rejects Plate -> Plate',()=>expect(validateUmpire(umpire,games,[a('g1','Plate'),a('g2','Plate')]).some(v=>v.rule==='PLATE_BREAK')).toBe(true))
  it('allows Plate -> OFF -> Base',()=>expect(validateUmpire(umpire,games,[a('g1','Plate'),a('g3','Base 1')])).toHaveLength(0))
  it('rejects Base -> Base',()=>expect(validateUmpire(umpire,games,[a('g1','Base 1'),a('g2','Base 1')]).some(v=>v.rule==='BACK_TO_BACK')).toBe(true))
  it('rejects a fourth game',()=>expect(validateUmpire(umpire,games,[a('g1','Base 1'),a('g2','Plate'),a('g3','Base 1'),a('g4','Plate')]).some(v=>v.rule==='MAX_GAMES')).toBe(true))
+ it('does not count games from another day towards the daily maximum',()=>{
+   const nextDay:Game={...games[3],id:'g5',number:5,date:'2026-08-31'}
+   expect(validateUmpire(umpire,[...games,nextDay],[a('g1','Base 1'),a('g2','Plate'),a('g3','Base 1'),{...a('g4','Plate'),gameId:'g5'}]).some(v=>v.rule==='MAX_GAMES')).toBe(false)
+ })
 })
