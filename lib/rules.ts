@@ -17,7 +17,11 @@ export function validateUmpire(umpire:Umpire,games:Game[],assignments:Assignment
    const a=mine[i],b=mine[j];if(a.game.date!==b.game.date||a.gameId===b.gameId)continue
    const aStart=start(a.game),bStart=start(b.game),aEnd=Math.max(end(a.game),aStart),bEnd=Math.max(end(b.game),bStart)
    const overlaps=aStart===bStart||(aStart<bEnd&&bStart<aEnd)
-   if(overlaps)issues.push({umpireId:umpire.id,rule:'NO_DOUBLE_BOOKING',severity:'hard',gameId:b.gameId,message:`Rule: No double booking. ${umpire.name} is assigned to Game ${a.game.number} and Game ${b.game.number} at overlapping times (${a.game.start} and ${b.game.start}).`})
+   if(overlaps){
+    const message=`Core rule: No double booking. ${umpire.name} is assigned to Game ${a.game.number} and Game ${b.game.number} at overlapping times (${a.game.start} and ${b.game.start}).`
+    issues.push({umpireId:umpire.id,rule:'NO_DOUBLE_BOOKING',severity:'hard',gameId:a.gameId,message})
+    issues.push({umpireId:umpire.id,rule:'NO_DOUBLE_BOOKING',severity:'hard',gameId:b.gameId,message})
+   }
   }
  }
  for(let i=0;i<mine.length-1;i++){const current=mine[i],next=mine[i+1];if(current.game.date!==next.game.date)continue;const ci=ordered.findIndex(g=>g.id===current.gameId),ni=ordered.findIndex(g=>g.id===next.gameId);if(ni!==ci+1)continue;if(rules.has('plate-break')&&current.position==='Plate')issues.push({umpireId:umpire.id,rule:'PLATE_BREAK',severity:'hard',gameId:next.gameId,message:`Rule 3: Plate on Game ${current.game.number} requires the next scheduled game off.`});if(rules.has('back-to-back')&&current.position!=='Plate'&&next.position!=='Plate')issues.push({umpireId:umpire.id,rule:'BACK_TO_BACK',severity:'hard',gameId:next.gameId,message:`Rule 2: back-to-back games must be Base → Plate.`})}
