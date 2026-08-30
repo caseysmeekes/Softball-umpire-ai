@@ -1,0 +1,37 @@
+name: Update workload columns
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  update-workload:
+    if: "!contains(github.event.head_commit.message, 'Update workload columns')"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Update workload table
+        run: |
+          node <<'NODE'
+          const fs = require('fs')
+          const path = 'app/dashboard/page.tsx'
+          let src = fs.readFileSync(path, 'utf8')
+          const start = src.indexOf('<section className="card"><h2>Umpire Workload</h2>')
+          const marker = "</section></>}{tab==='schedule'"
+          const end = src.indexOf(marker, start)
+          if (start < 0 || end < 0) throw new Error('Workload table section not found')
+          const replacement = `<section className="card"><h2>Umpire Workload</h2><div className="table"><table><thead><tr><th>Umpire</th><th>Games</th><th>Plate</th><th>1ST BASE</th><th>2ND BASE</th><th>3RD BASE</th><th>Status</th></tr></thead><tbody>{umpires.map(u=>{const mine=draft.filter(a=>a.umpireId===u.id),v=issues.filter(x=>x.umpireId===u.id);return <tr key={u.id}><td><span className="colourdot" style={{background:colour(u.id)}}></span>{u.name}</td><td>{new Set(mine.map(a=>a.gameId)).size}/{u.maxGames}</td><td>{mine.filter(a=>a.position==='Plate').length}</td><td>{mine.filter(a=>a.position==='Base 1').length}</td><td>{mine.filter(a=>a.position==='Base 2').length}</td><td>{mine.filter(a=>a.position==='Base 3').length}</td><td className={v.some(x=>x.severity==='hard')?'bad':v.length?'warn':'good'}>{v.some(x=>x.severity==='hard')?'Rule violation':v.length?'Soft warning':'Valid'}</td></tr>})}</tbody></table></div></section>`
+          src = src.slice(0, start) + replacement + src.slice(end + '</section>'.length)
+          fs.writeFileSync(path, src)
+          NODE
+      - name: Commit workload columns
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/dashboard/page.tsx
+          git diff --cached --quiet && exit 0
+          git commit -m "Update workload columns"
+          git push
