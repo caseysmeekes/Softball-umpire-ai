@@ -21,8 +21,12 @@ export function allocateUnlocked(games:Game[],umpires:Umpire[],lockedAssignments
  const rules=enabled(activeRuleIds),assignments=[...lockedAssignments],unallocated:{game:Game;position:Position;reasons:string[]}[]=[]
  const gameCount=(u:Umpire)=>new Set(assignments.filter(a=>a.umpireId===u.id).map(a=>a.gameId)).size
  const plateCount=(u:Umpire)=>assignments.filter(a=>a.umpireId===u.id&&a.position==='Plate').length
+ // Random tie-breaking is intentional. It prevents identical schedules on different tournament days
+ // when the games have the same structure, while preserving all rule-based scoring and fairness.
+ const randomTie=(u:Umpire)=>u.id+'-'+Math.random().toString(36).slice(2,10)
  for(const game of orderedGames(games))for(const position of game.positions){if(assignments.some(a=>a.gameId===game.id&&a.position===position))continue
   let candidates=umpires.filter(u=>canAssign(u,game,position,games,assignments,activeRuleIds))
+  const tieBreak=new Map(candidates.map(u=>[u.id,randomTie(u)]))
   candidates.sort((a,b)=>{
    const score=(u:Umpire)=>{const mine=assignments.filter(x=>x.umpireId===u.id),count=gameCount(u),plates=plateCount(u);let s=count*100+mine.length
     if(position==='Plate'&&rules.has('one-plate'))s+=plates*250
@@ -31,7 +35,7 @@ export function allocateUnlocked(games:Game[],umpires:Umpire[],lockedAssignments
     if(rules.has('one-plate'))s+=plates*80
     if(rules.has('same-country')){const target=countriesInGame(game);for(const x of mine){const g=games.find(y=>y.id===x.gameId);if(g&&target.some(c=>countriesInGame(g).includes(c)))s+=25}}
     if(rules.has('same-partner')){const partners=assignments.filter(x=>x.gameId===game.id&&x.umpireId!==u.id);for(const p of partners){const prior=assignments.some(x=>x.umpireId===u.id&&x.gameId!==game.id&&assignments.some(y=>y.gameId===x.gameId&&y.umpireId===p.umpireId));if(prior)s+=35}}
-    return s};return score(a)-score(b)||a.name.localeCompare(b.name)
+    return s};return score(a)-score(b)||tieBreak.get(a.id)!.localeCompare(tieBreak.get(b.id)! )
   })
   if(position==='Plate'&&rules.has('one-plate')){const unplated=candidates.filter(u=>plateCount(u)===0);if(unplated.length)candidates=unplated}
   if(candidates[0])assignments.push({gameId:game.id,umpireId:candidates[0].id,position});else unallocated.push({game,position,reasons:['No available umpire satisfies the enabled hard rules. Locked assignments were preserved.']})
