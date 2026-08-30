@@ -20,7 +20,25 @@ const enabled = (ids?: string[]) => new Set(ids ?? configuredRuleIds())
 const countriesInGame = (game: Game) => game.teams.split(/\s+(?:v|vs|versus)\s+/i).map(x => x.trim().toLowerCase()).filter(Boolean)
 const isBase = (position: Position) => position !== 'Plate'
 
-const availabilityForGame = (umpire: Umpire, dayIndex: number) => umpire.availabilityByDay?.[dayIndex]
+const availabilityForGame = (umpire: Umpire, dayIndex: number) => {
+  // Validation can be called from an event handler immediately after availability
+  // changes. Prefer the latest persisted umpire record when available so the
+  // validation layer cannot retain an older availability snapshot.
+  if (typeof window !== 'undefined') {
+    try {
+      const raw = window.localStorage.getItem('softball-umpires')
+      const stored = raw ? JSON.parse(raw) : null
+      if (Array.isArray(stored)) {
+        const current = stored.find((u: Umpire) => u.id === umpire.id)
+        if (current) return current.availabilityByDay?.[dayIndex]
+      }
+    } catch {
+      // Fall back to the umpire object supplied by the caller.
+    }
+  }
+  return umpire.availabilityByDay?.[dayIndex]
+}
+
 const availabilityCoversGame = (umpire: Umpire, game: Game, dayIndex: number) => {
   const configured = availabilityForGame(umpire, dayIndex)
   if (!configured) return true
