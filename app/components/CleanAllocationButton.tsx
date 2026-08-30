@@ -8,14 +8,11 @@ export default function CleanAllocationButton() {
 
   const clean = () => {
     try {
-      // Clear the current legacy allocation stores.
       localStorage.removeItem('softball-assignments')
       localStorage.removeItem('softball-manual-locks')
       localStorage.removeItem('softball-locked')
+      localStorage.removeItem('softball-allocation-change-history')
 
-      // Multi-day tournaments store allocations and manual locks inside
-      // the tournament object, so clear those too while preserving games,
-      // umpire pool, rules and tournament/day structure.
       const raw = localStorage.getItem('softball-tournament')
       if (raw) {
         const tournament = JSON.parse(raw)
@@ -29,7 +26,6 @@ export default function CleanAllocationButton() {
         }
       }
 
-      // Clear any current-day draft state and start from the first day.
       localStorage.removeItem('softball-selected-day')
       localStorage.removeItem('softball-print-day')
       setOpen(false)
