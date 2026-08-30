@@ -1,47 +1,39 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { usePathname } from 'next/navigation'
 
-type Game = { date?: string; positions?: string[] }
+type Game = { date?: string }
 type Umpire = { maxGames?: number }
 
 export default function CrewCapacityHint() {
-  const [data, setData] = useState<{ games: number; umpires: number; capacity: number; minUmpires: number } | null>(null)
+  const pathname = usePathname()
+  const [data, setData] = useState<{ games: number; umpires: number; capacity: number; required: number } | null>(null)
 
   useEffect(() => {
+    if (pathname !== '/dashboard') return
     try {
       const games = JSON.parse(localStorage.getItem('softball-games') || '[]') as Game[]
       const umpires = JSON.parse(localStorage.getItem('softball-umpires') || '[]') as Umpire[]
       if (!Array.isArray(games) || !Array.isArray(umpires) || !games.length || !umpires.length) return
 
-      const dates = [...new Set(games.map(g => g.date || ''))]
-      const maxPerUmpire = Math.max(1, ...umpires.map(u => Number(u.maxGames) || 3))
-      const maxGamesPerDay = Math.min(3, maxPerUmpire)
-      const maxDailyGames = Math.max(...dates.map(date => games.filter(g => (g.date || '') === date).length), 0)
-      const minUmpires = Math.ceil((maxDailyGames * 2) / maxDailyGamesPerUmpire(maxDailyGames, maxGamesPerDay))
-      const capacity = umpires.length * maxGamesPerDay
-
-      setData({ games: games.length, umpires: umpires.length, capacity, minUmpires })
+      const required = games.length * 2
+      const capacity = umpires.reduce((total, umpire) => total + Math.min(3, Math.max(1, Number(umpire.maxGames) || 3)), 0)
+      setData({ games: games.length, umpires: umpires.length, capacity, required })
     } catch {
-      // Keep this advisory unobtrusive if stored data is unavailable.
+      // Advisory only. Never let it affect the allocator.
     }
-  }, [])
+  }, [pathname])
 
-  if (!data) return null
+  if (pathname !== '/dashboard' || !data) return null
 
-  const requiredSlots = data.games * 2
-  const enough = data.capacity >= requiredSlots
-  const colour = enough ? '#2e8b57' : '#c56a1a'
+  const enough = data.capacity >= data.required
 
   return (
-    <div style={{ margin: '18px 5% 0', padding: '10px 14px', border: '1px solid #dce4e8', borderRadius: 8, background: '#fff', fontSize: 11, color: '#60727b', display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+    <div style={{ margin: '18px 5% 0', padding: '9px 13px', border: '1px solid #dce4e8', borderRadius: 8, background: '#fff', fontSize: 11, color: '#60727b', display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
       <span><strong style={{ color: '#29404a' }}>Crew guidance:</strong> 2 umpires is the minimum crew size.</span>
-      <span style={{ color }}><strong>{enough ? 'Capacity OK' : 'Capacity short'}</strong> · {data.umpires} umpires × up to 3 games = {data.capacity} game assignments · {requiredSlots} needed for 2-umpire crews.</span>
-      <span>Adding more crew members increases assignments, so a larger crew is not a fix for an umpire-capacity shortage.</span>
+      <span style={{ fontWeight: 600 }}>{enough ? '✓ 2-umpire coverage looks achievable' : '⚠ Umpire capacity may be too low for 2-umpire crews'}</span>
+      <span>{data.games} games · {data.umpires} umpires · {data.capacity}/{data.required} assignment capacity</span>
     </div>
   )
-}
-
-function maxGamesPerDayPerUmpire(_games: number, maxGames: number) {
-  return Math.max(1, maxGames)
 }
