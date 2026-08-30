@@ -21,7 +21,6 @@ export function allocateUnlocked(games:Game[],umpires:Umpire[],lockedAssignments
  const rules=enabled(activeRuleIds),assignments=[...lockedAssignments],unallocated:{game:Game;position:Position;reasons:string[]}[]=[]
  const gameCount=(u:Umpire)=>new Set(assignments.filter(a=>a.umpireId===u.id).map(a=>a.gameId)).size
  const plateCount=(u:Umpire)=>assignments.filter(a=>a.umpireId===u.id&&a.position==='Plate').length
- const scheduledPlateGames=new Set(games.map(g=>g.date))
  for(const game of orderedGames(games))for(const position of game.positions){if(assignments.some(a=>a.gameId===game.id&&a.position===position))continue
   let candidates=umpires.filter(u=>canAssign(u,game,position,games,assignments,activeRuleIds))
   candidates.sort((a,b)=>{
