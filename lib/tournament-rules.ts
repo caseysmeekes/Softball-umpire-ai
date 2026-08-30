@@ -15,5 +15,7 @@ export const TOURNAMENT_RULES: TournamentRule[]=[
 {id:'finals-rest',name:'Finals / semi-final rest',category:'hard',description:'Optionally require a minimum game-off period before finals or other designated high-priority games.',defaultEnabled:false},
 {id:'international-final',name:'International umpire for finals',category:'soft',description:'Prefer an International-grade umpire for designated finals when available.',defaultEnabled:false},
 {id:'field-change',name:'Avoid consecutive field changes',category:'soft',description:'Prefer not to move an umpire between fields on consecutive games.',defaultEnabled:false},
+{id:'same-country',name:'Minimise same-country assignments',category:'soft',description:'Prefer not to repeatedly assign the same umpire to games involving the same country/team across the tournament.',defaultEnabled:false},
+{id:'same-partner',name:'Minimise repeat umpire partners',category:'soft',description:'Prefer not to repeatedly pair the same umpires together across games.',defaultEnabled:false},
 ]
 export const DEFAULT_RULE_IDS=TOURNAMENT_RULES.filter(r=>r.defaultEnabled).map(r=>r.id)
