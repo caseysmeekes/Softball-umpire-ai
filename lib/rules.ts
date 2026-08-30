@@ -20,9 +20,9 @@ const enabled = (ids?: string[]) => new Set(ids ?? configuredRuleIds())
 const countriesInGame = (game: Game) => game.teams.split(/\s+(?:v|vs|versus)\s+/i).map(x => x.trim().toLowerCase()).filter(Boolean)
 const isBase = (position: Position) => position !== 'Plate'
 
-const availabilityForGame = (umpire: Umpire, game: Game) => umpire.availabilityByDay?.[game.date]
-const availabilityCoversGame = (umpire: Umpire, game: Game) => {
-  const configured = availabilityForGame(umpire, game)
+const availabilityForGame = (umpire: Umpire, dayIndex: number) => umpire.availabilityByDay?.[dayIndex]
+const availabilityCoversGame = (umpire: Umpire, game: Game, dayIndex: number) => {
+  const configured = availabilityForGame(umpire, dayIndex)
   if (!configured) return true
   if (!configured.enabled) return false
   if (!configured.from || !configured.until) return false
@@ -36,6 +36,7 @@ export function validateUmpire(
   games: Game[],
   assignments: Assignment[],
   activeRuleIds?: string[],
+  dayIndex = 0,
 ): Violation[] {
   const rules = enabled(activeRuleIds)
   const ordered = orderedGames(games)
@@ -146,8 +147,8 @@ export function validateUmpire(
 
   if (rules.has('availability')) {
     for (const item of mine) {
-      const configured = availabilityForGame(umpire, item.game)
-      if (configured && !availabilityCoversGame(umpire, item.game)) {
+      const configured = availabilityForGame(umpire, dayIndex)
+      if (configured && !availabilityCoversGame(umpire, item.game, dayIndex)) {
         const window = configured.enabled && configured.from && configured.until ? `${configured.from}–${configured.until}` : 'unavailable'
         issues.push({
           umpireId: umpire.id,
@@ -187,20 +188,21 @@ export function canAssign(
   games: Game[],
   assignments: Assignment[],
   activeRuleIds?: string[],
+  dayIndex = 0,
 ) {
   if (assignments.some(a => a.gameId === game.id && a.umpireId === umpire.id)) return false
   const trial = [...assignments, { gameId: game.id, umpireId: umpire.id, position }]
-  return !validateUmpire(umpire, games, trial, activeRuleIds).some(v =>
+  return !validateUmpire(umpire, games, trial, activeRuleIds, dayIndex).some(v =>
     v.severity === 'hard' &&
     (v.gameId === game.id || v.rule === 'MAX_GAMES' || v.rule === 'NO_DOUBLE_BOOKING' || v.rule === 'BACK_TO_BACK' || v.rule === 'PLATE_BREAK' || v.rule === 'AVAILABILITY' || v.rule === 'SAME_GAME_MULTIPLE_POSITIONS')
   )
 }
 
-export function allocate(games: Game[], umpires: Umpire[], activeRuleIds?: string[], lockedAssignments: Assignment[] = []) {
-  return allocateUnlocked(games, umpires, lockedAssignments, activeRuleIds)
+export function allocate(games: Game[], umpires: Umpire[], activeRuleIds?: string[], lockedAssignments: Assignment[] = [], dayIndex = 0) {
+  return allocateUnlocked(games, umpires, lockedAssignments, activeRuleIds, dayIndex)
 }
 
-export function allocateUnlocked(games: Game[], umpires: Umpire[], lockedAssignments: Assignment[], activeRuleIds?: string[]) {
+export function allocateUnlocked(games: Game[], umpires: Umpire[], lockedAssignments: Assignment[], activeRuleIds?: string[], dayIndex = 0) {
   const rules = enabled(activeRuleIds)
   const assignments = [...lockedAssignments]
   const unallocated: { game: Game; position: Position; reasons: string[] }[] = []
@@ -211,7 +213,7 @@ export function allocateUnlocked(games: Game[], umpires: Umpire[], lockedAssignm
   for (const game of orderedGames(games)) {
     for (const position of game.positions) {
       if (assignments.some(a => a.gameId === game.id && a.position === position)) continue
-      let candidates = umpires.filter(u => canAssign(u, game, position, games, assignments, activeRuleIds))
+      let candidates = umpires.filter(u => canAssign(u, game, position, games, assignments, activeRuleIds, dayIndex))
       const tieBreak = new Map(candidates.map(u => [u.id, randomTie(u)]))
       candidates.sort((a, b) => {
         const score = (u: Umpire) => {
