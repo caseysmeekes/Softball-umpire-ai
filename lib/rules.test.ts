@@ -4,16 +4,31 @@ import { Assignment, Game, Umpire } from './types'
 
 const umpire: Umpire = { id: 'u1', name: 'Test', availability: 'All day', maxGames: 3, experience: 'National' }
 const games: Game[] = [
-  { id: 'g1', number: 1, date: '2026-08-30', start: '09:00', end: '10:20', field: '1', teams: 'A v B', division: 'X', positions: ['Plate', 'Base 1', 'Base 3'] },
-  { id: 'g2', number: 2, date: '2026-08-30', start: '10:30', end: '11:50', field: '1', teams: 'C v D', division: 'X', positions: ['Plate', 'Base 1', 'Base 3'] },
-  { id: 'g3', number: 3, date: '2026-08-30', start: '12:00', end: '13:20', field: '1', teams: 'E v F', division: 'X', positions: ['Plate', 'Base 1', 'Base 3'] },
-  { id: 'g4', number: 4, date: '2026-08-30', start: '13:30', end: '14:50', field: '1', teams: 'G v H', division: 'X', positions: ['Plate', 'Base 1', 'Base 3'] },
+  { id: 'g1', number: 1, date: '2026-08-30', start: '09:00', end: '10:20', field: '1', teams: 'A v B', division: 'X', positions: ['Plate', 'Base 1', 'Base 2', 'Base 3'] },
+  { id: 'g2', number: 2, date: '2026-08-30', start: '10:30', end: '11:50', field: '1', teams: 'C v D', division: 'X', positions: ['Plate', 'Base 1', 'Base 2', 'Base 3'] },
+  { id: 'g3', number: 3, date: '2026-08-30', start: '12:00', end: '13:20', field: '1', teams: 'E v F', division: 'X', positions: ['Plate', 'Base 1', 'Base 2', 'Base 3'] },
+  { id: 'g4', number: 4, date: '2026-08-30', start: '13:30', end: '14:50', field: '1', teams: 'G v H', division: 'X', positions: ['Plate', 'Base 1', 'Base 2', 'Base 3'] },
 ]
-const a = (gameId: string, position: 'Plate' | 'Base 1' | 'Base 3'): Assignment => ({ gameId, position, umpireId: 'u1' })
+const a = (gameId: string, position: 'Plate' | 'Base 1' | 'Base 2' | 'Base 3'): Assignment => ({ gameId, position, umpireId: 'u1' })
 
 describe('allocation rules', () => {
   it('flags the same umpire in Plate and 1st Base in one game', () => {
     const issues = validateUmpire(umpire, games, [a('g1', 'Plate'), a('g1', 'Base 1')])
+    expect(issues.some(v => v.rule === 'SAME_GAME_MULTIPLE_POSITIONS' && v.severity === 'hard' && v.gameId === 'g1')).toBe(true)
+  })
+
+  it('flags the same umpire in Plate and 2nd Base in one game', () => {
+    const issues = validateUmpire(umpire, games, [a('g1', 'Plate'), a('g1', 'Base 2')])
+    expect(issues.some(v => v.rule === 'SAME_GAME_MULTIPLE_POSITIONS' && v.severity === 'hard' && v.gameId === 'g1')).toBe(true)
+  })
+
+  it('flags the same umpire in Plate and 3rd Base in one game', () => {
+    const issues = validateUmpire(umpire, games, [a('g1', 'Plate'), a('g1', 'Base 3')])
+    expect(issues.some(v => v.rule === 'SAME_GAME_MULTIPLE_POSITIONS' && v.severity === 'hard' && v.gameId === 'g1')).toBe(true)
+  })
+
+  it('flags the same umpire in 1st and 2nd Base in one game', () => {
+    const issues = validateUmpire(umpire, games, [a('g1', 'Base 1'), a('g1', 'Base 2')])
     expect(issues.some(v => v.rule === 'SAME_GAME_MULTIPLE_POSITIONS' && v.severity === 'hard' && v.gameId === 'g1')).toBe(true)
   })
 
@@ -22,8 +37,13 @@ describe('allocation rules', () => {
     expect(issues.some(v => v.rule === 'SAME_GAME_MULTIPLE_POSITIONS' && v.severity === 'hard' && v.gameId === 'g1')).toBe(true)
   })
 
+  it('flags the same umpire in 2nd and 3rd Base in one game', () => {
+    const issues = validateUmpire(umpire, games, [a('g1', 'Base 2'), a('g1', 'Base 3')])
+    expect(issues.some(v => v.rule === 'SAME_GAME_MULTIPLE_POSITIONS' && v.severity === 'hard' && v.gameId === 'g1')).toBe(true)
+  })
+
   it('flags Plate plus any Base position as a hard core violation', () => {
-    for (const position of ['Base 1', 'Base 3'] as const) {
+    for (const position of ['Base 1', 'Base 2', 'Base 3'] as const) {
       const issues = validateUmpire(umpire, games, [a('g1', 'Plate'), a('g1', position)])
       expect(issues.some(v => v.rule === 'SAME_GAME_MULTIPLE_POSITIONS' && v.severity === 'hard')).toBe(true)
     }
@@ -55,20 +75,42 @@ describe('allocation rules', () => {
     expect(issues.filter(v => v.rule === 'NO_DOUBLE_BOOKING')).toHaveLength(2)
   })
 
-  it('allows Base 1 -> Plate back-to-back', () => {
-    expect(validateUmpire(umpire, games, [a('g1', 'Base 1'), a('g2', 'Plate')], ['back-to-back'])).toHaveLength(0)
+  it('allows 1st Base -> Plate back-to-back', () => {
+    expect(validateUmpire(umpire, games, [a('g1', 'Base 1'), a('g2', 'Plate')], ['back-to-back'])).not.toContainEqual(expect.objectContaining({ rule: 'BACK_TO_BACK' }))
   })
 
-  it('allows Base 3 -> Plate back-to-back', () => {
-    expect(validateUmpire(umpire, games, [a('g1', 'Base 3'), a('g2', 'Plate')], ['back-to-back'])).toHaveLength(0)
+  it('allows 2nd Base -> Plate back-to-back', () => {
+    expect(validateUmpire(umpire, games, [a('g1', 'Base 2'), a('g2', 'Plate')], ['back-to-back'])).not.toContainEqual(expect.objectContaining({ rule: 'BACK_TO_BACK' }))
+  })
+
+  it('allows 3rd Base -> Plate back-to-back', () => {
+    expect(validateUmpire(umpire, games, [a('g1', 'Base 3'), a('g2', 'Plate')], ['back-to-back'])).not.toContainEqual(expect.objectContaining({ rule: 'BACK_TO_BACK' }))
   })
 
   it('allows Base -> Base back-to-back', () => {
-    expect(validateUmpire(umpire, games, [a('g1', 'Base 1'), a('g2', 'Base 3')], ['back-to-back'])).toHaveLength(0)
+    expect(validateUmpire(umpire, games, [a('g1', 'Base 1'), a('g2', 'Base 3')], ['back-to-back'])).not.toContainEqual(expect.objectContaining({ rule: 'BACK_TO_BACK' }))
   })
 
-  it('rejects Plate -> Base back-to-back', () => {
+  it('rejects Plate -> 1st Base back-to-back', () => {
     expect(validateUmpire(umpire, games, [a('g1', 'Plate'), a('g2', 'Base 1')], ['back-to-back']).some(v => v.rule === 'BACK_TO_BACK' && v.severity === 'hard')).toBe(true)
+  })
+
+  it('rejects Plate -> 2nd Base back-to-back', () => {
+    expect(validateUmpire(umpire, games, [a('g1', 'Plate'), a('g2', 'Base 2')], ['back-to-back']).some(v => v.rule === 'BACK_TO_BACK' && v.severity === 'hard')).toBe(true)
+  })
+
+  it('rejects Plate -> 3rd Base back-to-back', () => {
+    expect(validateUmpire(umpire, games, [a('g1', 'Plate'), a('g2', 'Base 3')], ['back-to-back']).some(v => v.rule === 'BACK_TO_BACK' && v.severity === 'hard')).toBe(true)
+  })
+
+  it('does not treat assignments separated by another scheduled game as back-to-back', () => {
+    const issues = validateUmpire(
+      umpire,
+      games,
+      [a('g1', 'Plate'), a('g3', 'Base 1')],
+      ['back-to-back'],
+    )
+    expect(issues.some(v => v.rule === 'BACK_TO_BACK')).toBe(false)
   })
 
   it('still enforces the separate Plate break rule', () => {
