@@ -20,6 +20,17 @@ const enabled = (ids?: string[]) => new Set(ids ?? configuredRuleIds())
 const countriesInGame = (game: Game) => game.teams.split(/\s+(?:v|vs|versus)\s+/i).map(x => x.trim().toLowerCase()).filter(Boolean)
 const isBase = (position: Position) => position !== 'Plate'
 
+const availabilityForGame = (umpire: Umpire, game: Game) => umpire.availabilityByDay?.[game.date]
+const availabilityCoversGame = (umpire: Umpire, game: Game) => {
+  const configured = availabilityForGame(umpire, game)
+  if (!configured) return true
+  if (!configured.enabled) return false
+  if (!configured.from || !configured.until) return false
+  const gameStart = game.start
+  const gameEnd = game.end || game.start
+  return gameStart >= configured.from && gameEnd <= configured.until
+}
+
 export function validateUmpire(
   umpire: Umpire,
   games: Game[],
@@ -36,9 +47,6 @@ export function validateUmpire(
 
   const issues: Violation[] = []
 
-  // Core structural rule: an umpire can only occupy one position in a game.
-  // This is deliberately not optional because a duplicate position assignment
-  // is structurally invalid regardless of the selected tournament preferences.
   const byGame = new Map<string, typeof mine>()
   for (const item of mine) {
     const existing = byGame.get(item.gameId) ?? []
@@ -101,14 +109,8 @@ export function validateUmpire(
     }
   }
 
-  // Evaluate back-to-back appointments at game level rather than relying on
-  // individual assignment ordering. This prevents multiple positions in the
-  // same game from confusing the transition between two scheduled games.
   const gamesForUmpire = [...byGame.values()]
-    .map(items => ({
-      game: items[0].game,
-      positions: items.map(item => item.position),
-    }))
+    .map(items => ({ game: items[0].game, positions: items.map(item => item.position) }))
     .sort((a, b) => start(a.game) - start(b.game) || a.game.number - b.game.number)
 
   for (let i = 0; i < gamesForUmpire.length - 1; i++) {
@@ -120,7 +122,6 @@ export function validateUmpire(
     const ni = ordered.findIndex(g => g.id === next.game.id)
     if (ci < 0 || ni !== ci + 1) continue
 
-    // Plate-break is the separate rule requiring the next scheduled game off.
     if (rules.has('plate-break') && current.positions.includes('Plate')) {
       issues.push({
         umpireId: umpire.id,
@@ -131,7 +132,6 @@ export function validateUmpire(
       })
     }
 
-    // Back-to-back direction rule: Base -> Plate is permitted; Plate -> Base is not.
     const plateToBase = current.positions.includes('Plate') && next.positions.some(isBase)
     if (rules.has('back-to-back') && plateToBase) {
       issues.push({
@@ -141,6 +141,22 @@ export function validateUmpire(
         gameId: next.game.id,
         message: `Core rule: Back-to-back games cannot be Plate → Base. ${umpire.name} worked Plate on Game ${current.game.number} and Base on Game ${next.game.number}.`,
       })
+    }
+  }
+
+  if (rules.has('availability')) {
+    for (const item of mine) {
+      const configured = availabilityForGame(umpire, item.game)
+      if (configured && !availabilityCoversGame(umpire, item.game)) {
+        const window = configured.enabled && configured.from && configured.until ? `${configured.from}–${configured.until}` : 'unavailable'
+        issues.push({
+          umpireId: umpire.id,
+          rule: 'AVAILABILITY',
+          severity: 'hard',
+          gameId: item.gameId,
+          message: `Core rule: Umpire availability. ${umpire.name} is not available for Game ${item.game.number} (${item.game.start}${item.game.end ? `–${item.game.end}` : ''}). Configured availability: ${window}.`,
+        })
+      }
     }
   }
 
@@ -176,7 +192,7 @@ export function canAssign(
   const trial = [...assignments, { gameId: game.id, umpireId: umpire.id, position }]
   return !validateUmpire(umpire, games, trial, activeRuleIds).some(v =>
     v.severity === 'hard' &&
-    (v.gameId === game.id || v.rule === 'MAX_GAMES' || v.rule === 'NO_DOUBLE_BOOKING' || v.rule === 'BACK_TO_BACK' || v.rule === 'PLATE_BREAK' || v.rule === 'SAME_GAME_MULTIPLE_POSITIONS')
+    (v.gameId === game.id || v.rule === 'MAX_GAMES' || v.rule === 'NO_DOUBLE_BOOKING' || v.rule === 'BACK_TO_BACK' || v.rule === 'PLATE_BREAK' || v.rule === 'AVAILABILITY' || v.rule === 'SAME_GAME_MULTIPLE_POSITIONS')
   )
 }
 
