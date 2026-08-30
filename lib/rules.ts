@@ -18,6 +18,7 @@ const configuredRuleIds = () => {
 
 const enabled = (ids?: string[]) => new Set(ids ?? configuredRuleIds())
 const countriesInGame = (game: Game) => game.teams.split(/\s+(?:v|vs|versus)\s+/i).map(x => x.trim().toLowerCase()).filter(Boolean)
+const isBase = (position: Position) => position !== 'Plate'
 
 export function validateUmpire(
   umpire: Umpire,
@@ -100,33 +101,44 @@ export function validateUmpire(
     }
   }
 
-  for (let i = 0; i < mine.length - 1; i++) {
-    const current = mine[i]
-    const next = mine[i + 1]
+  // Evaluate back-to-back appointments at game level rather than relying on
+  // individual assignment ordering. This prevents multiple positions in the
+  // same game from confusing the transition between two scheduled games.
+  const gamesForUmpire = [...byGame.values()]
+    .map(items => ({
+      game: items[0].game,
+      positions: items.map(item => item.position),
+    }))
+    .sort((a, b) => start(a.game) - start(b.game) || a.game.number - b.game.number)
+
+  for (let i = 0; i < gamesForUmpire.length - 1; i++) {
+    const current = gamesForUmpire[i]
+    const next = gamesForUmpire[i + 1]
     if (current.game.date !== next.game.date) continue
 
-    const ci = ordered.findIndex(g => g.id === current.gameId)
-    const ni = ordered.findIndex(g => g.id === next.gameId)
-    if (ci < 0 || ni !== ci + 1 || current.gameId === next.gameId) continue
+    const ci = ordered.findIndex(g => g.id === current.game.id)
+    const ni = ordered.findIndex(g => g.id === next.game.id)
+    if (ci < 0 || ni !== ci + 1) continue
 
     // Plate-break is the separate rule requiring the next scheduled game off.
-    if (rules.has('plate-break') && current.position === 'Plate') {
+    if (rules.has('plate-break') && current.positions.includes('Plate')) {
       issues.push({
         umpireId: umpire.id,
         rule: 'PLATE_BREAK',
         severity: 'hard',
-        gameId: next.gameId,
+        gameId: next.game.id,
         message: `Rule 3: Plate on Game ${current.game.number} requires the next scheduled game off.`,
       })
     }
 
     // Back-to-back direction rule: Base -> Plate is permitted; Plate -> Base is not.
-    if (rules.has('back-to-back') && current.position === 'Plate' && next.position !== 'Plate') {
+    const plateToBase = current.positions.includes('Plate') && next.positions.some(isBase)
+    if (rules.has('back-to-back') && plateToBase) {
       issues.push({
         umpireId: umpire.id,
         rule: 'BACK_TO_BACK',
         severity: 'hard',
-        gameId: next.gameId,
+        gameId: next.game.id,
         message: `Core rule: Back-to-back games cannot be Plate → Base. ${umpire.name} worked Plate on Game ${current.game.number} and Base on Game ${next.game.number}.`,
       })
     }
