@@ -1,10 +1,5 @@
-'use client'
-import {useEffect,useState} from 'react'
-import {umpireColour} from '../../lib/umpire-colours'
-export default function PrintAllocation(){
- const [games,setGames]=useState<any[]>([]),[umps,setUmpires]=useState<any[]>([]),[assignments,setAssignments]=useState<any[]>([])
- useEffect(()=>{const read=(k:string)=>{try{return JSON.parse(localStorage.getItem(k)||'[]')}catch{return[]}};setGames(read('softball-games'));setUmpires(read('softball-umpires'));setAssignments(read('softball-assignments'))},[])
- const name=(id:string)=>umps.find(u=>u.id===id)?.name||'Unallocated'; const colour=(id:string)=>umpireColour(Math.max(0,umps.findIndex(u=>u.id===id)))
- const positions=['Plate','Base 1','Base 2','Base 3']
- return <main className="print-page"><div className="print-actions"><button onClick={()=>window.print()}>Print Allocation</button><button onClick={()=>location.href='/'}>Back</button></div><h1>Softball Umpire Allocation</h1><p className="print-subtitle">Colour-coded umpire allocation. Each umpire keeps the same colour throughout the schedule.</p><table><thead><tr><th>Game</th><th>Time</th><th>Field</th><th>Teams</th>{positions.map(p=><th key={p}>{p==='Plate'?'Plate':p==='Base 1'?'1st Base':p==='Base 2'?'2nd Base':'3rd Base'}</th>)}</tr></thead><tbody>{games.map(g=><tr key={g.id}><td>#{g.number}</td><td>{g.start}–{g.end}</td><td>{g.field}</td><td>{g.teams}</td>{positions.map(p=>{const a=assignments.find(x=>x.gameId===g.id&&x.position===p);return <td key={p} style={a?{background:colour(a.umpireId)}:undefined}><strong>{a?name(a.umpireId):'—'}</strong></td>})}</tr>)}</tbody></table><section className="print-key"><h2>Umpire Colour Key</h2><div>{umps.map((u,i)=><span key={u.id} style={{background:umpireColour(i)}}>{u.name}</span>)}</div></section><style jsx>{`body{background:#fff}.print-page{padding:32px;font-family:Arial,sans-serif;color:#18242b}.print-actions{display:flex;gap:8px;margin-bottom:24px}.print-actions button{padding:8px 14px;border:1px solid #ccd5da;background:#fff;border-radius:5px}.print-page h1{margin-bottom:4px}.print-subtitle{color:#667780;margin-top:0}.print-page table{width:100%;border-collapse:collapse;margin-top:24px;font-size:12px}.print-page th,.print-page td{border:1px solid #cfd8dd;padding:9px;text-align:left}.print-page th{background:#f2f5f6}.print-key{margin-top:28px}.print-key div{display:flex;flex-wrap:wrap;gap:8px}.print-key span{padding:7px 12px;border:1px solid #d5dde1;border-radius:5px}@media print{.print-actions{display:none}.print-page{padding:0}.print-page table{font-size:10px}}`}</style></main>
+import MultiDayPrint from './MultiDayPrint'
+
+export default function PrintAllocation() {
+  return <MultiDayPrint />
 }
