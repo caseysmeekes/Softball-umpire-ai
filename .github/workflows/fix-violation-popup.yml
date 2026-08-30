@@ -1,0 +1,36 @@
+name: Patch workload violation popup
+on:
+  push:
+    branches: [main]
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch dashboard
+        shell: python
+        run: |
+          from pathlib import Path
+          p=Path('app/dashboard/page.tsx')
+          s=p.read_text()
+          old="<td className={v.some(x=>x.severity==='hard')?'bad':v.length?'warn':'good'}>{v.some(x=>x.severity==='hard')?'Rule violation':v.length?'Soft warning':'Valid'}</td>"
+          new="<td className={v.some(x=>x.severity==='hard')?'bad':v.length?'warn':'good'}>{v.length?<button type=\"button\" className=\"statusButton\" onClick={()=>alert(v.map(x=>(x.severity==='hard'?'🔴 HARD RULE: ':'🟠 SOFT WARNING: ')+x.message).join('\\n\\n'))}>{v.some(x=>x.severity==='hard')?'Rule violation': 'Soft warning'}</button>: 'Valid'}</td>"
+          if old not in s:
+            raise SystemExit('Expected workload status markup was not found')
+          s=s.replace(old,new,1)
+          marker=".bad{color:#bd3e35;font-weight:600}"
+          css=".bad{color:#bd3e35;font-weight:600}.statusButton{border:0;background:transparent;padding:0;color:inherit;font:inherit;font-weight:600;text-decoration:underline;text-decoration-style:dotted;cursor:pointer}.statusButton:hover{opacity:.75}"
+          if marker not in s:
+            raise SystemExit('Expected CSS marker was not found')
+          s=s.replace(marker,css,1)
+          p.write_text(s)
+      - name: Commit patch and remove workflow
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/dashboard/page.tsx
+          git rm .github/workflows/fix-violation-popup.yml
+          git commit -m "Fix workload violation popup [skip ci]"
+          git push
