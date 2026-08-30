@@ -9,7 +9,7 @@ permissions:
 
 jobs:
   wire:
-    if: "!contains(github.event.head_commit.message, 'Wire manual schedule builder')"
+    if: "github.event.head_commit.message != 'Wire manual schedule builder'"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
