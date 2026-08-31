@@ -35,6 +35,28 @@ describe('double booking time formats', () => {
     expect(doubleBookings.map(v => v.gameId).sort()).toEqual(['g31', 'g32'])
   })
 
+  it('flags both games when imported schedule dates use NZ DD/MM/YYYY format', () => {
+    const games: Game[] = [
+      { id: 'g1', number: 1, date: '01/09/2026', start: '10:00 AM', end: '11:00 AM', field: 'Diamond 1', teams: 'A vs B', division: 'Test', positions: ['Plate', 'Base 1', 'Base 2', 'Base 3'] },
+      { id: 'g2', number: 2, date: '01/09/2026', start: '10:00 AM', end: '11:00 AM', field: 'Diamond 2', teams: 'C vs D', division: 'Test', positions: ['Plate', 'Base 1', 'Base 2', 'Base 3'] },
+    ]
+
+    const positions: Assignment['position'][] = ['Plate', 'Base 1', 'Base 2', 'Base 3']
+    for (const first of positions) {
+      for (const second of positions) {
+        const issues = validateUmpire(
+          umpire,
+          games,
+          [assignment('g1', first), assignment('g2', second)],
+          ['no-double-booking'],
+        )
+        const doubleBookings = issues.filter(v => v.rule === 'NO_DOUBLE_BOOKING')
+        expect(doubleBookings).toHaveLength(2)
+        expect(doubleBookings.map(v => v.gameId).sort()).toEqual(['g1', 'g2'])
+      }
+    }
+  })
+
   it('does not flag non-overlapping 12-hour schedule times', () => {
     const games: Game[] = [
       { id: 'g1', number: 1, date: '2026-08-30', start: '10:00 AM', end: '11:00 AM', field: 'Diamond 1', teams: 'A vs B', division: 'Test', positions: ['Plate', 'Base 1'] },
