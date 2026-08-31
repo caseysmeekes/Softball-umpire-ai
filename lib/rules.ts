@@ -18,17 +18,55 @@ const parseClock = (value: string) => {
   return hour * 60 + minute
 }
 
+const parseDateStart = (value: string) => {
+  const date = value.trim()
+  let year: number
+  let month: number
+  let day: number
+
+  let match = date.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/)
+  if (match) {
+    year = Number(match[1])
+    month = Number(match[2])
+    day = Number(match[3])
+  } else {
+    match = date.match(/^(\d{4})\/(\d{1,2})\/(\d{1,2})$/)
+    if (match) {
+      year = Number(match[1])
+      month = Number(match[2])
+      day = Number(match[3])
+    } else {
+      match = date.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/)
+      if (!match) return Number.NaN
+      day = Number(match[1])
+      month = Number(match[2])
+      year = Number(match[3])
+    }
+  }
+
+  const candidate = new Date(Date.UTC(year, month - 1, day))
+  if (
+    candidate.getUTCFullYear() !== year ||
+    candidate.getUTCMonth() !== month - 1 ||
+    candidate.getUTCDate() !== day
+  ) return Number.NaN
+
+  return candidate.getTime()
+}
+
 const start = (g: Game) => {
+  const dateStart = parseDateStart(g.date)
   const minutes = parseClock(g.start)
-  return Number.isFinite(minutes)
-    ? new Date(`${g.date}T00:00:00`).getTime() + minutes * 60_000
+  return Number.isFinite(dateStart) && Number.isFinite(minutes)
+    ? dateStart + minutes * 60_000
     : Number.NaN
 }
 const end = (g: Game) => {
+  const dateStart = parseDateStart(g.date)
   if (!g.end) return start(g)
   const minutes = parseClock(g.end)
-  return Number.isFinite(minutes)
-    ? new Date(`${g.date}T00:00:00`).getTime() + minutes * 60_000
+  return Number.isFinite(dateStart) && Number.isFinite(minutes)
+    ? dateStart + minutes * 60_000
     : start(g)
 }
 const orderedGames = (games: Game[]) => [...games].sort((a, b) => start(a) - start(b) || a.number - b.number)
@@ -49,9 +87,6 @@ const countriesInGame = (game: Game) => game.teams.split(/\s+(?:v|vs|versus)\s+/
 const isBase = (position: Position) => position !== 'Plate'
 
 const availabilityForGame = (umpire: Umpire, dayIndex: number) => {
-  // Validation can be called from an event handler immediately after availability
-  // changes. Prefer the latest persisted umpire record when available so the
-  // validation layer cannot retain an older availability snapshot.
   if (typeof window !== 'undefined') {
     try {
       const raw = window.localStorage.getItem('softball-umpires')
