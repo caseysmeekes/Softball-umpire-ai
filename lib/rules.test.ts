@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { validateUmpire } from './rules'
+import { allocateUnlocked, validateUmpire } from './rules'
 import { Assignment, Game, Umpire } from './types'
 
 const umpire: Umpire = { id: 'u1', name: 'Test', availability: 'All day', maxGames: 3, experience: 'National' }
@@ -95,6 +95,39 @@ describe('allocation rules', () => {
     const issues = validateUmpire(umpire, games, [a('g1', 'Plate'), a('g3', 'Plate')], ['one-plate'])
     expect(issues.some(v => v.rule === 'ONE_PLATE' && v.severity === 'soft')).toBe(true)
     expect(issues.some(v => v.rule === 'ONE_PLATE' && v.severity === 'hard')).toBe(false)
+  })
+  it('prioritises first Plate assignments before a second Plate', () => {
+    const umpires: Umpire[] = [
+      { id: 'u1', name: 'One', availability: 'All day', maxGames: 3, experience: 'National' },
+      { id: 'u2', name: 'Two', availability: 'All day', maxGames: 3, experience: 'National' },
+      { id: 'u3', name: 'Three', availability: 'All day', maxGames: 3, experience: 'National' },
+    ]
+    const plateGames: Game[] = [
+      { id: 'p1', number: 1, date: '2026-08-30', start: '09:00', end: '10:00', field: '1', teams: 'A v B', division: 'X', positions: ['Plate'] },
+      { id: 'p2', number: 2, date: '2026-08-30', start: '10:00', end: '11:00', field: '1', teams: 'C v D', division: 'X', positions: ['Plate'] },
+      { id: 'p3', number: 3, date: '2026-08-30', start: '11:00', end: '12:00', field: '1', teams: 'E v F', division: 'X', positions: ['Plate'] },
+      { id: 'p4', number: 4, date: '2026-08-30', start: '12:00', end: '13:00', field: '1', teams: 'G v H', division: 'X', positions: ['Plate'] },
+    ]
+    const result = allocateUnlocked(plateGames, umpires, [], ['one-plate'])
+    const plateAssignments = result.assignments.filter(a => a.position === 'Plate')
+    expect(new Set(plateAssignments.slice(0, 3).map(a => a.umpireId)).size).toBe(3)
+  })
+  it('prefers a varied Base position when total workload is equal', () => {
+    const umpires: Umpire[] = [
+      { id: 'u1', name: 'One', availability: 'All day', maxGames: 3, experience: 'National' },
+      { id: 'u2', name: 'Two', availability: 'All day', maxGames: 3, experience: 'National' },
+    ]
+    const positionGames: Game[] = [
+      { id: 'b1', number: 1, date: '2026-08-30', start: '09:00', end: '10:00', field: '1', teams: 'A v B', division: 'X', positions: ['Base 1'] },
+      { id: 'b2', number: 2, date: '2026-08-30', start: '10:00', end: '11:00', field: '1', teams: 'C v D', division: 'X', positions: ['Base 3'] },
+      { id: 'b3', number: 3, date: '2026-08-30', start: '11:00', end: '12:00', field: '1', teams: 'E v F', division: 'X', positions: ['Base 3'] },
+    ]
+    const locked: Assignment[] = [
+      { gameId: 'b1', umpireId: 'u1', position: 'Base 1' },
+      { gameId: 'b2', umpireId: 'u2', position: 'Base 3' },
+    ]
+    const result = allocateUnlocked(positionGames, umpires, locked, ['workload-balance'])
+    expect(result.assignments.find(a => a.gameId === 'b3')?.umpireId).toBe('u1')
   })
   it('does not count another day towards the daily maximum', () => {
     const nextDay: Game = { ...games[3], id: 'g5', number: 5, date: '2026-08-31' }

@@ -289,6 +289,7 @@ export function allocateUnlocked(games: Game[], umpires: Umpire[], lockedAssignm
   const unallocated: { game: Game; position: Position; reasons: string[] }[] = []
   const gameCount = (u: Umpire) => new Set(assignments.filter(a => a.umpireId === u.id).map(a => a.gameId)).size
   const plateCount = (u: Umpire) => assignments.filter(a => a.umpireId === u.id && a.position === 'Plate').length
+  const positionCount = (u: Umpire, target: Position) => assignments.filter(a => a.umpireId === u.id && a.position === target).length
   const randomTie = (u: Umpire) => u.id + '-' + Math.random().toString(36).slice(2, 10)
 
   for (const game of orderedGames(games)) {
@@ -301,11 +302,13 @@ export function allocateUnlocked(games: Game[], umpires: Umpire[], lockedAssignm
           const mine = assignments.filter(x => x.umpireId === u.id)
           const count = gameCount(u)
           const plates = plateCount(u)
+          const samePosition = positionCount(u, position)
           let s = count * 100 + mine.length
           if (position === 'Plate' && rules.has('one-plate')) s += plates * 250
           if (position === 'Plate' && rules.has('plate-balance')) s += plates * 100
           if (position !== 'Plate' && rules.has('plate-balance')) s += plates * 20
           if (rules.has('one-plate')) s += plates * 80
+          if (position !== 'Plate' && rules.has('workload-balance')) s += samePosition * 60
           if (rules.has('same-country')) {
             const target = countriesInGame(game)
             for (const x of mine) {
