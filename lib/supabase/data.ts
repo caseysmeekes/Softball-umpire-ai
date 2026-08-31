@@ -6,6 +6,7 @@ import type { Tournament } from '../tournament'
 type Tables = Database['public']['Tables']
 type TournamentRow = Tables['tournaments']['Row']
 type TournamentDayRow = Tables['tournament_days']['Row']
+type TournamentDayStateRow = Tables['tournament_day_state']['Row']
 type UmpireRow = Tables['umpires']['Row']
 type GameRow = Tables['games']['Row']
 type AllocationRow = Tables['allocations']['Row']
@@ -14,6 +15,14 @@ type LockRow = Tables['manual_locks']['Row']
 type TournamentRuleRow = Tables['tournament_rules']['Row']
 type HistoryRow = Tables['allocation_change_history']['Row']
 type AvailabilityWithDayIndex = AvailabilityRow & { day_index: number }
+
+export type SupabaseTournamentDayState = {
+  tournamentDayId: string
+  draftAssignments: Assignment[]
+  draftManualLocks: string[]
+  committedAssignments: Assignment[]
+  committedManualLocks: string[]
+}
 
 export type SupabaseTournamentSnapshot = {
   tournamentId: string
@@ -198,6 +207,36 @@ export async function loadTournamentFromSupabase(tournamentId: string): Promise<
     enabledRuleIds,
     history,
   }
+}
+
+export async function getTournamentDayState(tournamentDayId: string): Promise<SupabaseTournamentDayState | null> {
+  if (!tournamentDayId) throw new Error('A Supabase tournament day ID is required.')
+
+  const { data, error } = await getSupabaseClient()
+    .from('tournament_day_state')
+    .select('*')
+    .eq('tournament_day_id', tournamentDayId)
+    .maybeSingle()
+  if (error) throw error
+  if (!data) return null
+
+  return {
+    tournamentDayId: data.tournament_day_id,
+    draftAssignments: data.draft_assignments as unknown as Assignment[],
+    draftManualLocks: data.draft_manual_locks as unknown as string[],
+    committedAssignments: data.committed_assignments as unknown as Assignment[],
+    committedManualLocks: data.committed_manual_locks as unknown as string[],
+  }
+}
+
+export async function upsertTournamentDayState(input: Tables['tournament_day_state']['Insert']): Promise<TournamentDayStateRow> {
+  const { data, error } = await getSupabaseClient()
+    .from('tournament_day_state')
+    .upsert(input, { onConflict: 'tournament_day_id' })
+    .select()
+    .single()
+  if (error) throw error
+  return data
 }
 
 export async function createTournament(name: string): Promise<TournamentRow> {

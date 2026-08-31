@@ -15,6 +15,32 @@ export interface Database {
         Update: { tournament_id?: string; legacy_id?: string; day_index?: number; name?: string; date?: string | null }
         Relationships: []
       }
+      tournament_day_state: {
+        Row: {
+          tournament_day_id: string
+          draft_assignments: Json
+          draft_manual_locks: Json
+          committed_assignments: Json
+          committed_manual_locks: Json
+          updated_at: string
+        }
+        Insert: {
+          tournament_day_id: string
+          draft_assignments?: Json
+          draft_manual_locks?: Json
+          committed_assignments?: Json
+          committed_manual_locks?: Json
+          updated_at?: string
+        }
+        Update: {
+          draft_assignments?: Json
+          draft_manual_locks?: Json
+          committed_assignments?: Json
+          committed_manual_locks?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
       umpires: {
         Row: { id: string; tournament_id: string; name: string; experience: 'International' | 'National' | 'Regional' | 'Developing'; max_games: number; legacy_availability: string | null; created_at: string; updated_at: string }
         Insert: { id: string; tournament_id: string; name: string; experience: 'International' | 'National' | 'Regional' | 'Developing'; max_games: number; legacy_availability?: string | null; created_at?: string; updated_at?: string }
@@ -60,7 +86,7 @@ export interface Database {
       allocation_change_history: {
         Row: { id: string; tournament_day_id: string; game_id: string; game_number: number; time: string | null; diamond: string | null; position: 'Plate' | 'Base 1' | 'Base 2' | 'Base 3'; from_umpire: string; to_umpire: string; status: 'Pending' | 'Committed'; created_at: string }
         Insert: { id: string; tournament_day_id: string; game_id: string; game_number: number; time?: string | null; diamond?: string | null; position: 'Plate' | 'Base 1' | 'Base 2' | 'Base 3'; from_umpire: string; to_umpire: string; status: 'Pending' | 'Committed'; created_at?: string }
-        Update: { tournament_day_id?: string; game_id?: string; game_number?: number; time?: string | null; diamond?: string | null; position?: 'Plate' | 'Base 1' | 'Base 2' | 'Base 3'; from_umpire?: string; to_umpire?: string; status?: 'Pending' | 'Committed' }
+        Update: { tournament_day_id?: string; game_id?: string; game_number?: number; time?: string; diamond?: string; position?: 'Plate' | 'Base 1' | 'Base 2' | 'Base 3'; from_umpire?: string; to_umpire?: string; status?: 'Pending' | 'Committed' }
         Relationships: []
       }
     }
