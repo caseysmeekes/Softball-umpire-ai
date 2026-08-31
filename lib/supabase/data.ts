@@ -1,6 +1,6 @@
 import { getSupabaseClient } from './client'
 import type { Database } from './database.types'
-import type { Assignment, Umpire, UmpireAvailability } from '../types'
+import type { Assignment, Game, Position, Umpire, UmpireAvailability } from '../types'
 import type { Tournament } from '../tournament'
 
 type Tables = Database['public']['Tables']
@@ -13,6 +13,7 @@ type AvailabilityRow = Tables['umpire_availability']['Row']
 type LockRow = Tables['manual_locks']['Row']
 type TournamentRuleRow = Tables['tournament_rules']['Row']
 type HistoryRow = Tables['allocation_change_history']['Row']
+type AvailabilityWithDayIndex = AvailabilityRow & { day_index: number }
 
 export type SupabaseTournamentSnapshot = {
   tournamentId: string
@@ -38,12 +39,10 @@ function timeForApp(value: string | null | undefined): string {
   return value.slice(0, 5)
 }
 
-function toAppUmpire(row: UmpireRow, availabilityRows: AvailabilityRow[]): Umpire {
+function toAppUmpire(row: UmpireRow, availabilityRows: AvailabilityWithDayIndex[]): Umpire {
   const availabilityByDay: Record<number, UmpireAvailability> = {}
   for (const availability of availabilityRows) {
-    const dayIndex = availability.day_index
-    if (dayIndex == null) continue
-    availabilityByDay[dayIndex] = {
+    availabilityByDay[availability.day_index] = {
       enabled: availability.enabled,
       from: timeForApp(availability.from_time),
       until: timeForApp(availability.until_time),
@@ -60,7 +59,7 @@ function toAppUmpire(row: UmpireRow, availabilityRows: AvailabilityRow[]): Umpir
   }
 }
 
-function toAppGame(row: GameRow) {
+function toAppGame(row: GameRow): Game {
   return {
     id: row.id,
     number: row.number,
@@ -70,7 +69,7 @@ function toAppGame(row: GameRow) {
     field: row.field,
     teams: row.teams,
     division: row.division,
-    positions: row.positions as GameRow['positions'],
+    positions: row.positions as Position[],
   }
 }
 
@@ -164,11 +163,11 @@ export async function loadTournamentFromSupabase(tournamentId: string): Promise<
     })),
   }
 
-  const availabilityByUmpire = new Map<string, AvailabilityRow[]>()
+  const availabilityByUmpire = new Map<string, AvailabilityWithDayIndex[]>()
   for (const availability of availabilityResult.data || []) {
     const list = availabilityByUmpire.get(availability.umpire_id) || []
     const dayIndex = dayIndexById.get(availability.tournament_day_id)
-    if (dayIndex != null) list.push({ ...availability, day_index: dayIndex } as AvailabilityRow & { day_index: number })
+    if (dayIndex != null) list.push({ ...availability, day_index: dayIndex })
     availabilityByUmpire.set(availability.umpire_id, list)
   }
 
@@ -250,7 +249,7 @@ export async function createGame(input: Tables['games']['Insert']): Promise<Game
 }
 
 export async function updateGame(id: string, input: Tables['games']['Update']): Promise<GameRow> {
-  const { data, error } = await getSupabaseClient().from('games').update(input).eq('id', id).select().single()
+  const { data, error } = await getSupabaseClient().from('games').update(input).select().single()
   if (error) throw error
   return data
 }
