@@ -10,7 +10,7 @@ export interface Database {
         Relationships: []
       }
       tournament_days: {
-        Row: { id: string; tournament_id: string; legacy_id: string; day_index: number; name: string; date: string | null; created_at: string; }
+        Row: { id: string; tournament_id: string; legacy_id: string; day_index: number; name: string; date: string | null; created_at: string }
         Insert: { id?: string; tournament_id: string; legacy_id: string; day_index: number; name: string; date?: string | null; created_at?: string }
         Update: { tournament_id?: string; legacy_id?: string; day_index?: number; name?: string; date?: string | null }
         Relationships: []
@@ -37,6 +37,12 @@ export interface Database {
         Row: { game_id: string; umpire_id: string; position: 'Plate' | 'Base 1' | 'Base 2' | 'Base 3'; created_at: string; updated_at: string }
         Insert: { game_id: string; umpire_id: string; position: 'Plate' | 'Base 1' | 'Base 2' | 'Base 3'; created_at?: string; updated_at?: string }
         Update: { umpire_id?: string; position?: 'Plate' | 'Base 1' | 'Base 2' | 'Base 3'; updated_at?: string }
+        Relationships: []
+      }
+      manual_locks: {
+        Row: { game_id: string; position: 'Plate' | 'Base 1' | 'Base 2' | 'Base 3'; umpire_id: string; created_at: string }
+        Insert: { game_id: string; position: 'Plate' | 'Base 1' | 'Base 2' | 'Base 3'; umpire_id: string; created_at?: string }
+        Update: { umpire_id?: string }
         Relationships: []
       }
       rules: {
