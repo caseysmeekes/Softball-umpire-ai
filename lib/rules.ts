@@ -1,8 +1,36 @@
 import { Assignment, Game, Position, Umpire, Violation } from './types'
 import { DEFAULT_RULE_IDS } from './tournament-rules'
 
-const start = (g: Game) => new Date(`${g.date}T${g.start}:00`).getTime()
-const end = (g: Game) => g.end ? new Date(`${g.date}T${g.end}:00`).getTime() : start(g)
+const parseClock = (value: string) => {
+  const match = value.trim().match(/^(\d{1,2}):(\d{2})(?:\s*([AP]M))?$/i)
+  if (!match) return Number.NaN
+
+  let hour = Number(match[1])
+  const minute = Number(match[2])
+  const meridiem = match[3]?.toUpperCase()
+
+  if (minute > 59 || hour > 23 || (meridiem && hour > 12)) return Number.NaN
+  if (meridiem) {
+    if (hour === 12) hour = 0
+    if (meridiem === 'PM') hour += 12
+  }
+
+  return hour * 60 + minute
+}
+
+const start = (g: Game) => {
+  const minutes = parseClock(g.start)
+  return Number.isFinite(minutes)
+    ? new Date(`${g.date}T00:00:00`).getTime() + minutes * 60_000
+    : Number.NaN
+}
+const end = (g: Game) => {
+  if (!g.end) return start(g)
+  const minutes = parseClock(g.end)
+  return Number.isFinite(minutes)
+    ? new Date(`${g.date}T00:00:00`).getTime() + minutes * 60_000
+    : start(g)
+}
 const orderedGames = (games: Game[]) => [...games].sort((a, b) => start(a) - start(b) || a.number - b.number)
 
 const configuredRuleIds = () => {
