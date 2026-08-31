@@ -43,7 +43,8 @@ describe('allocation rules', () => {
     }
   })
   it('flags both games for a simultaneous double booking', () => {
-    const issues = validateUmpire(umpire, games, [a('g1', 'Plate'), a('g2', 'Base 1')], ['no-double-booking'])
+    const simultaneous = [games[0], { ...games[1], start: '10:00', end: '11:20' }]
+    const issues = validateUmpire(umpire, simultaneous, [a('g1', 'Plate'), a('g2', 'Base 1')], ['no-double-booking'])
     expect(issues.filter(v => v.rule === 'NO_DOUBLE_BOOKING')).toHaveLength(2)
     expect(issues.some(v => v.gameId === 'g1')).toBe(true)
     expect(issues.some(v => v.gameId === 'g2')).toBe(true)
