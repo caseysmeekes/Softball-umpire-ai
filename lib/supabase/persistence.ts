@@ -7,16 +7,15 @@ type Tables = Database['public']['Tables']
 type AllocationChange = { id:string; day:number; gameId:string; gameNumber:number; time?:string; diamond?:string; position:string; from:string; to:string; status:'Pending'|'Committed' }
 const MIGRATION_ID_KEY = 'softball-supabase-migration-id'
 
-/**
- * Phase 5B is Supabase-first. Once the application is running against a
- * migrated tournament, a missing migration ID is a configuration/persistence
- * error, not a reason to silently fall back to localStorage for writes.
- */
-export function getPersistedTournamentId(): string {
-  if (typeof window === 'undefined') throw new Error('Supabase tournament persistence is only available in the browser.')
-  const id = localStorage.getItem(MIGRATION_ID_KEY)
-  if (!id) throw new Error('No Supabase tournament is linked. Run the Supabase migration before using persistent tournament data.')
-  return id
+/** Returns the active Supabase tournament when one is configured, otherwise null. */
+export function getPersistedTournamentId(): string | null {
+  if (typeof window === 'undefined') return null
+  const queryId = new URLSearchParams(window.location.search).get('tournamentId')
+  if (queryId) {
+    localStorage.setItem(MIGRATION_ID_KEY, queryId)
+    return queryId
+  }
+  return localStorage.getItem(MIGRATION_ID_KEY)
 }
 
 function timeValue(value?: string): string | null { if (!value) return null; return value.length === 5 ? `${value}:00` : value }
