@@ -10,9 +10,9 @@ export interface Database {
         Relationships: []
       }
       tournaments: {
-        Row: { id: string; name: string; status: 'active' | 'completed'; created_at: string; updated_at: string }
-        Insert: { id?: string; name: string; status?: 'active' | 'completed'; created_at?: string; updated_at?: string }
-        Update: { id?: string; name?: string; status?: 'active' | 'completed'; updated_at?: string }
+        Row: { id: string; name: string; status: 'active' | 'completed'; owner_id: string | null; created_at: string; updated_at: string }
+        Insert: { id?: string; name: string; status?: 'active' | 'completed'; owner_id?: string | null; created_at?: string; updated_at?: string }
+        Update: { id?: string; name?: string; status?: 'active' | 'completed'; owner_id?: string | null; updated_at?: string }
         Relationships: []
       }
       tournament_days: {
@@ -30,7 +30,7 @@ export interface Database {
       umpires: {
         Row: { id: string; tournament_id: string; name: string; experience: 'International' | 'National' | 'Regional' | 'Developing'; max_games: number; legacy_availability: string | null; created_at: string; updated_at: string }
         Insert: { id: string; tournament_id: string; name: string; experience: 'International' | 'National' | 'Regional' | 'Developing'; max_games: number; legacy_availability?: string | null; created_at?: string; updated_at?: string }
-        Update: { tournament_id?: string; name?: string; experience?: 'International' | 'National' | 'Regional' | 'Developing'; max_games?: number; legacy_availability?: string | null; updated_at?: string }
+        Update: { tournament_id?: string; name?: string; experience?: 'International' | 'National' | 'Regional' | 'Developing'; max_games?: number; updated_at?: string }
         Relationships: []
       }
       umpire_availability: {
@@ -71,7 +71,7 @@ export interface Database {
       }
       allocation_change_history: {
         Row: { id: string; tournament_day_id: string; game_id: string; game_number: number; time: string | null; diamond: string | null; position: 'Plate' | 'Base 1' | 'Base 2' | 'Base 3'; from_umpire: string; to_umpire: string; status: 'Pending' | 'Committed'; created_at: string }
-        Insert: { id: string; tournament_day_id: string; game_id: string; game_number: number; time?: string | null; diamond?: string | null; position: 'Plate' | 'Base 1' | 'Base 2' | 'Base 3'; from_umpire: string; to_umpire: string; status: 'Pending' | 'Committed'; created_at?: string }
+        Insert: { id: string; tournament_day_id: string; game_id: string; game_number: number; time?: string; diamond?: string; position: 'Plate' | 'Base 1' | 'Base 2' | 'Base 3'; from_umpire: string; to_umpire: string; status: 'Pending' | 'Committed'; created_at?: string }
         Update: { tournament_day_id?: string; game_id?: string; game_number?: number; time?: string; diamond?: string; position?: 'Plate' | 'Base 1' | 'Base 2' | 'Base 3'; from_umpire?: string; to_umpire?: string; status?: 'Pending' | 'Committed' }
         Relationships: []
       }
