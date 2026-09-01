@@ -3,6 +3,12 @@ export type Json = string | number | boolean | null | { [key: string]: Json | un
 export interface Database {
   public: {
     Tables: {
+      app_users: {
+        Row: { id: string; username: string; created_at: string }
+        Insert: { id?: string; username: string; created_at?: string }
+        Update: { id?: string; username?: string }
+        Relationships: []
+      }
       tournaments: {
         Row: { id: string; name: string; status: 'active' | 'completed'; created_at: string; updated_at: string }
         Insert: { id?: string; name: string; status?: 'active' | 'completed'; created_at?: string; updated_at?: string }
@@ -29,7 +35,7 @@ export interface Database {
       }
       umpire_availability: {
         Row: { id: string; umpire_id: string; tournament_day_id: string; enabled: boolean; from_time: string | null; until_time: string | null; created_at: string; updated_at: string }
-        Insert: { id?: string; umpire_id: string; tournament_day_id: string; enabled?: boolean; from_time?: string | null; until_time?: string | null; created_at?: string; updated_at?: string }
+        Insert: { id?: string; umpire_id: string; tournament_day_id: string; enabled?: boolean; from_time?: string | null; until_time?: string | null; updated_at?: string }
         Update: { enabled?: boolean; from_time?: string | null; until_time?: string | null; updated_at?: string }
         Relationships: []
       }
