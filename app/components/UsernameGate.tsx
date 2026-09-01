@@ -1,7 +1,7 @@
 'use client'
 
 import { FormEvent, useEffect, useState } from 'react'
-import { getCurrentUser, identifyUser, type AppUser } from '../../lib/supabase/userIdentity'
+import { clearStoredUserId, getCurrentUser, identifyUser, type AppUser } from '../../lib/supabase/userIdentity'
 
 export default function UsernameGate({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<AppUser | null>(null)
@@ -39,11 +39,29 @@ export default function UsernameGate({ children }: { children: React.ReactNode }
     }
   }
 
+  function logout() {
+    clearStoredUserId()
+    setUser(null)
+    setUsername('')
+    setError('')
+    window.location.href = '/tournaments'
+  }
+
   if (loading) {
     return <main className="identity-shell"><div className="identity-card"><p>Loading…</p></div></main>
   }
 
-  if (user) return <>{children}</>
+  if (user) {
+    return (
+      <>
+        <div className="user-bar">
+          <span>Signed in as <strong>{user.username}</strong></span>
+          <button type="button" onClick={logout}>Log out</button>
+        </div>
+        {children}
+      </>
+    )
+  }
 
   return (
     <main className="identity-shell">
@@ -78,9 +96,12 @@ export default function UsernameGate({ children }: { children: React.ReactNode }
         label{font-size:13px;font-weight:700}
         input{box-sizing:border-box;width:100%;padding:12px 13px;border:1px solid #cbd6dc;border-radius:7px;font-size:15px;outline:none}
         input:focus{border-color:#1587b2;box-shadow:0 0 0 3px rgba(21,135,178,.1)}
-        button{margin-top:7px;padding:12px 15px;border:0;border-radius:7px;background:#1587b2;color:#fff;font-size:14px;font-weight:700;cursor:pointer}
-        button:disabled{opacity:.55;cursor:not-allowed}
+        form button{margin-top:7px;padding:12px 15px;border:0;border-radius:7px;background:#1587b2;color:#fff;font-size:14px;font-weight:700;cursor:pointer}
+        form button:disabled{opacity:.55;cursor:not-allowed}
         .identity-error{margin-top:16px;padding:11px 12px;border-radius:7px;background:#fff1ef;border:1px solid #e4b9b3;color:#6d4540;font-size:13px}
+        .user-bar{height:38px;box-sizing:border-box;padding:0 6%;display:flex;align-items:center;justify-content:flex-end;gap:12px;background:#fff;border-bottom:1px solid #e3e9ec;color:#687982;font:12px Arial,sans-serif}
+        .user-bar button{border:1px solid #cbd6dc;background:#fff;color:#465963;border-radius:6px;padding:5px 9px;font:700 12px Arial,sans-serif;cursor:pointer}
+        .user-bar button:hover{background:#f5f7f8}
       `}</style>
     </main>
   )
