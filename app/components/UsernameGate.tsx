@@ -59,6 +59,11 @@ export default function UsernameGate({ children }: { children: React.ReactNode }
           <button type="button" onClick={logout}>Log out</button>
         </div>
         {children}
+        <style jsx>{`
+          .user-bar{height:38px;box-sizing:border-box;padding:0 6%;display:flex;align-items:center;justify-content:flex-end;gap:12px;background:#fff;border-bottom:1px solid #e3e9ec;color:#687982;font:12px Arial,sans-serif}
+          .user-bar button{border:1px solid #cbd6dc;background:#fff;color:#465963;border-radius:6px;padding:5px 9px;font:700 12px Arial,sans-serif;cursor:pointer}
+          .user-bar button:hover{background:#f5f7f8}
+        `}</style>
       </>
     )
   }
@@ -99,9 +104,6 @@ export default function UsernameGate({ children }: { children: React.ReactNode }
         form button{margin-top:7px;padding:12px 15px;border:0;border-radius:7px;background:#1587b2;color:#fff;font-size:14px;font-weight:700;cursor:pointer}
         form button:disabled{opacity:.55;cursor:not-allowed}
         .identity-error{margin-top:16px;padding:11px 12px;border-radius:7px;background:#fff1ef;border:1px solid #e4b9b3;color:#6d4540;font-size:13px}
-        .user-bar{height:38px;box-sizing:border-box;padding:0 6%;display:flex;align-items:center;justify-content:flex-end;gap:12px;background:#fff;border-bottom:1px solid #e3e9ec;color:#687982;font:12px Arial,sans-serif}
-        .user-bar button{border:1px solid #cbd6dc;background:#fff;color:#465963;border-radius:6px;padding:5px 9px;font:700 12px Arial,sans-serif;cursor:pointer}
-        .user-bar button:hover{background:#f5f7f8}
       `}</style>
     </main>
   )
