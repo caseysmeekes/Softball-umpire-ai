@@ -1,5 +1,6 @@
 import { getSupabaseClient } from './client'
 import type { Database } from './database.types'
+import { getCurrentUser } from './userIdentity'
 
 type TournamentRow = Database['public']['Tables']['tournaments']['Row']
 type TournamentSummary = TournamentRow & {
@@ -17,10 +18,14 @@ type TournamentSummary = TournamentRow & {
 export type { TournamentSummary }
 
 export async function getTournamentSummaries(): Promise<TournamentSummary[]> {
+  const currentUser = await getCurrentUser()
+  if (!currentUser) return []
+
   const s = getSupabaseClient()
   const sb = s as any
   const { data: ts, error: te } = await sb.from('tournaments')
-    .select('id,name,status,created_at,updated_at,start_date,end_date,location,venue,number_of_fields')
+    .select('id,name,status,owner_id,created_at,updated_at,start_date,end_date,location,venue,number_of_fields')
+    .eq('owner_id', currentUser.id)
     .order('updated_at', { ascending: false })
   if (te) throw te
 
@@ -81,8 +86,10 @@ export async function getTournamentSummaries(): Promise<TournamentSummary[]> {
 export async function createTournamentWithDays(name: string): Promise<TournamentRow> {
   const trimmed = name.trim()
   if (!trimmed) throw new Error('Tournament name is required.')
+  const currentUser = await getCurrentUser()
+  if (!currentUser) throw new Error('Please enter your username before creating a tournament.')
   const s = getSupabaseClient()
-  const { data: t, error } = await s.from('tournaments').insert({ name: trimmed }).select('*').single()
+  const { data: t, error } = await s.from('tournaments').insert({ name: trimmed, owner_id: currentUser.id }).select('*').single()
   if (error) throw error
   const days = [1, 2, 3, 4, 5].map(i => ({ tournament_id: t.id, legacy_id: `day-${i}`, day_index: i - 1, name: `Day ${i}` }))
   const { error: de } = await s.from('tournament_days').insert(days)
@@ -94,8 +101,10 @@ export async function createTournamentWithDays(name: string): Promise<Tournament
 }
 
 export async function getTournamentOverview(tournamentId: string) {
+  const currentUser = await getCurrentUser()
+  if (!currentUser) throw new Error('User identity is required.')
   const s = getSupabaseClient()
-  const { data: t, error: te } = await s.from('tournaments').select('*').eq('id', tournamentId).maybeSingle()
+  const { data: t, error: te } = await s.from('tournaments').select('*').eq('id', tournamentId).eq('owner_id', currentUser.id).maybeSingle()
   if (te) throw te
   if (!t) throw new Error('Tournament not found.')
   const { data: days, error: de } = await s.from('tournament_days').select('*').eq('tournament_id', tournamentId).order('day_index')
