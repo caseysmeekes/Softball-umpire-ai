@@ -1,5 +1,11 @@
 import MultiDayDashboard from './MultiDayDashboard'
+import TournamentCompletionBar from './TournamentCompletionBar'
 
 export default function DashboardPage() {
-  return <MultiDayDashboard />
+  return (
+    <>
+      <TournamentCompletionBar />
+      <MultiDayDashboard />
+    </>
+  )
 }
