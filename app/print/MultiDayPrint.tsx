@@ -1,6 +1,48 @@
 'use client'
 import {useEffect,useState} from 'react'
 import {umpireColour} from '../../lib/umpire-colours'
-import {readTournament,DAY_NAMES} from '../../lib/tournament'
+import {DAY_NAMES,readTournament} from '../../lib/tournament'
 import type {Assignment,Game,Umpire} from '../../lib/types'
-export default function MultiDayPrint(){const [games,setGames]=useState<Game[]>([]),[umps,setUmpires]=useState<Umpire[]>([]),[assignments,setAssignments]=useState<Assignment[]>([]),[day,setDay]=useState(0);useEffect(()=>{const d=Math.max(0,Math.min(4,Number(localStorage.getItem('softball-print-day')||localStorage.getItem('softball-selected-day')||0)));const t=readTournament();setDay(d);setGames(t.days[d]?.games||[]);setAssignments(t.days[d]?.assignments||[]);try{setUmpires(JSON.parse(localStorage.getItem('softball-umpires')||'[]'))}catch{}},[]);const name=(id:string)=>umps.find(u=>u.id===id)?.name||'Unallocated';const colour=(id:string)=>umpireColour(Math.max(0,umps.findIndex(u=>u.id===id)));const positions=['Plate','Base 1','Base 2','Base 3'];return <main className="page"><div className="actions"><button onClick={()=>window.print()}>Print Allocation</button><button onClick={()=>location.href='/dashboard'}>Back</button></div><h1>Softball Umpire Allocation</h1><p>Colour-coded allocation · {DAY_NAMES[day]}</p><table><thead><tr><th>Game</th><th>Time</th><th>Diamond</th><th>Teams</th>{positions.map(p=><th key={p}>{p==='Plate'?'Plate':p==='Base 1'?'1st Base':p==='Base 2'?'2nd Base':'3rd Base'}</th>)}</tr></thead><tbody>{games.map(g=><tr key={g.id}><td>#{g.number}</td><td>{g.start}{g.end?`–${g.end}`:''}</td><td>{g.field}</td><td>{g.teams}</td>{positions.map(p=>{const a=assignments.find(x=>x.gameId===g.id&&x.position===p);return <td key={p} style={a?{background:colour(a.umpireId)}:undefined}><strong>{a?name(a.umpireId):'—'}</strong></td>})}</tr>)}</tbody></table><section><h2>Umpire Colour Key</h2>{umps.map((u,i)=><span key={u.id} style={{background:umpireColour(i)}}>{u.name}</span>)}</section><style jsx>{`.page{padding:32px;font-family:Arial,sans-serif;color:#18242b}.actions{display:flex;gap:8px;margin-bottom:24px}.actions button{padding:8px 14px;border:1px solid #ccd5da;background:#fff;border-radius:5px}.page table{width:100%;border-collapse:collapse;margin-top:24px;font-size:12px}.page th,.page td{border:1px solid #cfd8dd;padding:9px;text-align:left}.page th{background:#f2f5f6}.page section{margin-top:28px}.page span{display:inline-block;padding:7px 12px;margin:0 8px 8px 0;border:1px solid #d5dde1;border-radius:5px}@media print{.actions{display:none}.page{padding:0}.page table{font-size:10px}}`}</style></main>}
+import {getPersistedTournamentId} from '../../lib/supabase/persistence'
+import {loadTournamentFromSupabase} from '../../lib/supabase/data'
+
+export default function MultiDayPrint(){
+ const [games,setGames]=useState<Game[]>([]),[umps,setUmpires]=useState<Umpire[]>([]),[assignments,setAssignments]=useState<Assignment[]>([]),[day,setDay]=useState(0),[loading,setLoading]=useState(true),[error,setError]=useState('')
+ useEffect(()=>{
+  let active=true
+  ;(async()=>{
+   const d=Math.max(0,Math.min(4,Number(localStorage.getItem('softball-print-day')||localStorage.getItem('softball-selected-day')||0)))
+   if(!active)return
+   setDay(d)
+   try{
+    const tournamentId=getPersistedTournamentId()
+    if(tournamentId){
+     const snapshot=await loadTournamentFromSupabase(tournamentId)
+     if(!active)return
+     const selectedDay=snapshot.tournament.days[d]
+     setGames(selectedDay?.games||[])
+     setAssignments(selectedDay?.assignments||[])
+     setUmpires(snapshot.umpires)
+     setLoading(false)
+     return
+    }
+    const t=readTournament()
+    setGames(t.days[d]?.games||[])
+    setAssignments(t.days[d]?.assignments||[])
+    try{setUmpires(JSON.parse(localStorage.getItem('softball-umpires')||'[]'))}catch{setUmpires([])}
+   }catch{
+    if(!active)return
+    setError('Unable to load tournament allocation.')
+   }finally{
+    if(active)setLoading(false)
+   }
+  })()
+  return()=>{active=false}
+ },[])
+ const name=(id:string)=>umps.find(u=>u.id===id)?.name||'Unallocated'
+ const colour=(id:string)=>umpireColour(Math.max(0,umps.findIndex(u=>u.id===id)))
+ const positions=['Plate','Base 1','Base 2','Base 3']
+ if(loading)return <main className="page"><div className="loading">Loading allocation…</div></main>
+ if(error)return <main className="page"><div className="error">{error}</div><div className="actions"><button onClick={()=>location.href='/dashboard'}>Back</button></div></main>
+ return <main className="page"><div className="actions"><button onClick={()=>window.print()}>Print Allocation</button><button onClick={()=>location.href='/dashboard'}>Back</button></div><h1>Softball Umpire Allocation</h1><p>Colour-coded allocation · {DAY_NAMES[day]}</p><table><thead><tr><th>Game</th><th>Time</th><th>Diamond</th><th>Teams</th>{positions.map(p=><th key={p}>{p==='Plate'?'Plate':p==='Base 1'?'1st Base':p==='Base 2'?'2nd Base':'3rd Base'}</th>)}</tr></thead><tbody>{games.map(g=><tr key={g.id}><td>#{g.number}</td><td>{g.start}{g.end?`–${g.end}`:''}</td><td>{g.field}</td><td>{g.teams}</td>{positions.map(p=>{const a=assignments.find(x=>x.gameId===g.id&&x.position===p);return <td key={p} style={a?{background:colour(a.umpireId)}:undefined}><strong>{a?name(a.umpireId):'—'}</strong></td>})}</tr>)}</tbody></table><section><h2>Umpire Colour Key</h2>{umps.map((u,i)=><span key={u.id} style={{background:umpireColour(i)}}>{u.name}</span>)}</section><style jsx>{`.page{padding:32px;font-family:Arial,sans-serif;color:#18242b}.actions{display:flex;gap:8px;margin-bottom:24px}.actions button{padding:8px 14px;border:1px solid #ccd5da;background:#fff;border-radius:5px}.page table{width:100%;border-collapse:collapse;margin-top:24px;font-size:12px}.page th,.page td{border:1px solid #cfd8dd;padding:9px;text-align:left}.page th{background:#f2f5f6}.page section{margin-top:28px}.page span{display:inline-block;padding:7px 12px;margin:0 8px 8px 0;border:1px solid #d5dde1;border-radius:5px}.loading,.error{padding:24px;border:1px solid #ccd5da;border-radius:5px;background:#fff}@media print{.actions{display:none}.page{padding:0}.page table{font-size:10px}}`}</style></main>
+}
