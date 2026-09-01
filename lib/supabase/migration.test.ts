@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { emptyTournament } from './tournament'
-import { validateLocalSnapshot, type LocalStorageSnapshot } from './supabase/migration'
+import { emptyTournament } from '../tournament'
+import { validateLocalSnapshot, type LocalStorageSnapshot } from './migration'
 
 describe('Supabase local-storage migration validation', () => {
   const baseSnapshot = (): LocalStorageSnapshot => {
