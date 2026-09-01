@@ -4,9 +4,9 @@ export interface Database {
   public: {
     Tables: {
       tournaments: {
-        Row: { id: string; name: string; created_at: string; updated_at: string }
-        Insert: { id?: string; name: string; created_at?: string; updated_at?: string }
-        Update: { id?: string; name?: string; updated_at?: string }
+        Row: { id: string; name: string; status: 'active' | 'completed'; created_at: string; updated_at: string }
+        Insert: { id?: string; name: string; status?: 'active' | 'completed'; created_at?: string; updated_at?: string }
+        Update: { id?: string; name?: string; status?: 'active' | 'completed'; updated_at?: string }
         Relationships: []
       }
       tournament_days: {
@@ -16,29 +16,9 @@ export interface Database {
         Relationships: []
       }
       tournament_day_state: {
-        Row: {
-          tournament_day_id: string
-          draft_assignments: Json
-          draft_manual_locks: Json
-          committed_assignments: Json
-          committed_manual_locks: Json
-          updated_at: string
-        }
-        Insert: {
-          tournament_day_id: string
-          draft_assignments?: Json
-          draft_manual_locks?: Json
-          committed_assignments?: Json
-          committed_manual_locks?: Json
-          updated_at?: string
-        }
-        Update: {
-          draft_assignments?: Json
-          draft_manual_locks?: Json
-          committed_assignments?: Json
-          committed_manual_locks?: Json
-          updated_at?: string
-        }
+        Row: { tournament_day_id: string; draft_assignments: Json; draft_manual_locks: Json; committed_assignments: Json; committed_manual_locks: Json; updated_at: string }
+        Insert: { tournament_day_id: string; draft_assignments?: Json; draft_manual_locks?: Json; committed_assignments?: Json; committed_manual_locks?: Json; updated_at?: string }
+        Update: { draft_assignments?: Json; draft_manual_locks?: Json; committed_assignments?: Json; committed_manual_locks?: Json; updated_at?: string }
         Relationships: []
       }
       umpires: {
