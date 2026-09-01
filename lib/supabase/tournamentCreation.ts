@@ -1,4 +1,5 @@
 import { getSupabaseClient } from './client'
+import { getCurrentUser } from './userIdentity'
 
 type NewTournamentInput = {
   name: string
@@ -16,10 +17,14 @@ export async function createNewTournament(input: NewTournamentInput) {
     throw new Error('End date cannot be before start date.')
   }
 
+  const currentUser = await getCurrentUser()
+  if (!currentUser) throw new Error('Please enter your username before creating a tournament.')
+
   const supabase = getSupabaseClient()
   const insertPayload = {
     name,
     status: 'active' as const,
+    owner_id: currentUser.id,
     start_date: input.startDate || null,
     end_date: input.endDate || null,
     location: input.location?.trim() || null,
@@ -30,7 +35,7 @@ export async function createNewTournament(input: NewTournamentInput) {
   const { data: tournament, error } = await supabase
     .from('tournaments')
     .insert(insertPayload as never)
-    .select('id, name, status')
+    .select('id, name, status, owner_id')
     .single()
 
   if (error) throw error
