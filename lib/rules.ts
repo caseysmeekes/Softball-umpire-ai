@@ -332,7 +332,11 @@ export function allocateUnlocked(games: Game[], umpires: Umpire[], lockedAssignm
         return score(a) - score(b) || tieBreak.get(a.id)!.localeCompare(tieBreak.get(b.id)!)
       })
 
-      if (position === 'Plate' && rules.has('one-plate')) {
+      // Plate-first fairness is a core allocation principle, not an optional preference.
+      // If any hard-rule-eligible umpire has no Plate assignment yet, use that group first.
+      // If none are eligible, retain the existing hard-rule candidate ranking so the
+      // allocator never creates an invalid assignment just to satisfy Plate fairness.
+      if (position === 'Plate') {
         const unplated = candidates.filter(u => plateCount(u) === 0)
         if (unplated.length) candidates = unplated
       }
