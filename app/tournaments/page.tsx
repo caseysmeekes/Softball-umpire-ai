@@ -2,12 +2,17 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import StartNewTournament from '../dashboard/StartNewTournament'
+import UsernameGate from '../components/UsernameGate'
 import { getTournamentSummaries, type TournamentSummary } from '../../lib/supabase/tournaments'
 
 const fmtDate = (value: string | null) => value ? new Intl.DateTimeFormat('en-NZ', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(`${value}T00:00:00`)) : null
 const fmtUpdated = (value: string) => new Intl.DateTimeFormat('en-NZ', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(value))
 
 export default function TournamentsPage() {
+  return <UsernameGate><TournamentsContent /></UsernameGate>
+}
+
+function TournamentsContent() {
   const [items, setItems] = useState<TournamentSummary[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
