@@ -55,14 +55,24 @@ export default function UsernameGate({ children }: { children: React.ReactNode }
     return (
       <>
         <div className="user-bar">
-          <span>Signed in as <strong>{user.username}</strong></span>
-          <button type="button" onClick={logout}>Log out</button>
+          <div className="global-nav">
+            <a href="/tournaments">My Tournaments</a>
+            <a href="/analysis">Analysis</a>
+          </div>
+          <div className="user-actions">
+            <span>Signed in as <strong>{user.username}</strong></span>
+            <button type="button" onClick={logout}>Log out</button>
+          </div>
         </div>
         {children}
         <style jsx>{`
-          .user-bar{height:38px;box-sizing:border-box;padding:0 6%;display:flex;align-items:center;justify-content:flex-end;gap:12px;background:#fff;border-bottom:1px solid #e3e9ec;color:#687982;font:12px Arial,sans-serif}
-          .user-bar button{border:1px solid #cbd6dc;background:#fff;color:#465963;border-radius:6px;padding:5px 9px;font:700 12px Arial,sans-serif;cursor:pointer}
-          .user-bar button:hover{background:#f5f7f8}
+          .user-bar{min-height:38px;box-sizing:border-box;padding:0 6%;display:flex;align-items:center;justify-content:space-between;gap:16px;background:#fff;border-bottom:1px solid #e3e9ec;color:#687982;font:12px Arial,sans-serif}
+          .global-nav,.user-actions{display:flex;align-items:center;gap:12px}
+          .global-nav a{color:#536771;text-decoration:none;font-weight:700}
+          .global-nav a:hover{color:#1587b2}
+          .user-actions button{border:1px solid #cbd6dc;background:#fff;color:#465963;border-radius:6px;padding:5px 9px;font:700 12px Arial,sans-serif;cursor:pointer}
+          .user-actions button:hover{background:#f5f7f8}
+          @media(max-width:600px){.user-bar{padding:7px 4%;flex-wrap:wrap}.global-nav,.user-actions{flex-wrap:wrap}}
         `}</style>
       </>
     )
