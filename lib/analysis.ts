@@ -1,7 +1,8 @@
 import type { Assignment, Game, Umpire } from './types'
 
 export type AnalysisMatrix = {
-  labels: string[]
+  rowLabels: string[]
+  columnLabels: string[]
   values: number[][]
 }
 
@@ -41,7 +42,7 @@ export function buildUmpirePairingMatrix(
     }
   }
 
-  return { labels, values }
+  return { rowLabels: labels, columnLabels: labels, values }
 }
 
 export function buildUmpireTeamMatrix(
@@ -49,17 +50,15 @@ export function buildUmpireTeamMatrix(
   games: Game[],
   assignments: Assignment[],
 ): AnalysisMatrix {
-  const teams = Array.from(
-    new Set(games.flatMap(game => splitTeams(game.teams))),
-  ).sort((a, b) => a.localeCompare(b))
-  const labels = umpires.map(umpire => umpire.name)
-  const values = labels.map(() => teams.map(() => 0))
+  const teams = Array.from(new Set(games.flatMap(game => splitTeams(game.teams))))
+    .sort((a, b) => a.localeCompare(b))
+  const rowLabels = umpires.map(umpire => umpire.name)
+  const values = rowLabels.map(() => teams.map(() => 0))
   const indexById = new Map(umpires.map((umpire, index) => [umpire.id, index]))
   const teamIndexByName = new Map(teams.map((team, index) => [team, index]))
 
   for (const game of games) {
-    const gameTeams = Array.from(new Set(splitTeams(game.teams)))
-    const teamIndexes = gameTeams
+    const teamIndexes = Array.from(new Set(splitTeams(game.teams)))
       .map(team => teamIndexByName.get(team))
       .filter((index): index is number => index !== undefined)
     const gameUmpireIndexes = Array.from(
@@ -78,5 +77,5 @@ export function buildUmpireTeamMatrix(
     }
   }
 
-  return { labels, values }
+  return { rowLabels, columnLabels: teams, values }
 }
