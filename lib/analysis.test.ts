@@ -37,12 +37,12 @@ describe('analysis calculations', () => {
 
   it('counts each umpire against both teams on games they worked', () => {
     const matrix = buildUmpireTeamMatrix(umpires, games, assignments)
-    expect(matrix.labels).toEqual(['Alice', 'Bob', 'Cara'])
-    expect(matrix.teamLabels).toBeUndefined()
+    expect(matrix.rowLabels).toEqual(['Alice', 'Bob', 'Cara'])
+    expect(matrix.columnLabels).toEqual(['Bears', 'Lions', 'Tigers'])
     expect(matrix.values).toEqual([
-      [2, 2, 1],
-      [2, 2, 1],
-      [1, 1, 0],
+      [1, 1, 2],
+      [1, 1, 2],
+      [1, 0, 1],
     ])
   })
 })
