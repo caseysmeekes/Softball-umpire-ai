@@ -5,7 +5,7 @@ import CrewCapacityHint from './components/CrewCapacityHint'
 import UsernameGate from './components/UsernameGate'
 
 export const metadata: Metadata = {
-  title: 'Softball Umpire Allocation',
+  title: 'Softball Umpire Allocator',
   description: 'Professional tournament umpire scheduling and allocation engine',
 }
 
