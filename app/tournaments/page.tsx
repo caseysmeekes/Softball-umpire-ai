@@ -55,7 +55,7 @@ export default function TournamentsPage() {
 
           <aside className="how-to">
             <div className="how-to-label">GETTING STARTED</div>
-            <h2>How to use Softball Umpire AI</h2>
+            <h2>How to use Softball Umpire Allocator</h2>
             <div className="how-to-step"><b>1. Create your tournament</b><p>Set up your tournament, tournament days, teams and games.</p></div>
             <div className="how-to-step"><b>2. Add your umpires</b><p>Add your umpire list and configure availability and experience.</p></div>
             <div className="how-to-step"><b>3. Allocate umpires</b><p>Start with Manual Allocation to assign any games or positions you specifically want to control. You can then use Auto Allocate to allocate the remaining games, or use it to allocate all games automatically.</p></div>
