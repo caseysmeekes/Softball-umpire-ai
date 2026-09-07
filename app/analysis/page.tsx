@@ -5,6 +5,7 @@ import type { Assignment, Game, Umpire } from '../../lib/types'
 import { buildUmpirePairingMatrix, buildUmpireTeamMatrix } from '../../lib/analysis'
 import { getPersistedTournamentId } from '../../lib/supabase/persistence'
 import { loadTournamentFromSupabase } from '../../lib/supabase/data'
+import { getTournamentSummaries, type TournamentSummary } from '../../lib/supabase/tournaments'
 import { migrateLegacyDayStorage, readTournament, type Tournament } from '../../lib/tournament'
 
 type Report = 'pairings' | 'teams'
@@ -26,6 +27,8 @@ export default function AnalysisPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [report, setReport] = useState<Report>('pairings')
+  const [tournaments, setTournaments] = useState<TournamentSummary[]>([])
+  const [selectedTournamentId, setSelectedTournamentId] = useState('')
   const [tournament, setTournament] = useState<Tournament | null>(null)
   const [umpires, setUmpires] = useState<Umpire[]>([])
 
@@ -41,14 +44,20 @@ export default function AnalysisPage() {
       )
 
       try {
-        const tournamentId = getPersistedTournamentId()
-        if (tournamentId) {
-          const snapshot = await loadTournamentFromSupabase(tournamentId)
+        const summaries = await getTournamentSummaries()
+        if (!active) return
+        setTournaments(summaries)
+
+        const persistedId = getPersistedTournamentId()
+        const initialId = summaries.some(t => t.id === persistedId) ? persistedId || '' : summaries[0]?.id || ''
+        setSelectedTournamentId(initialId)
+
+        if (initialId) {
+          const snapshot = await loadTournamentFromSupabase(initialId)
           if (!active) return
           setTournament(snapshot.tournament)
           setUmpires(snapshot.umpires)
         } else {
-          if (!active) return
           setTournament(fallback)
           setUmpires(read<Umpire[]>('softball-umpires', []))
         }
@@ -69,6 +78,22 @@ export default function AnalysisPage() {
       active = false
     }
   }, [])
+
+  const selectTournament = async (id: string) => {
+    if (!id || id === selectedTournamentId) return
+    setSelectedTournamentId(id)
+    setLoading(true)
+    setError('')
+    try {
+      const snapshot = await loadTournamentFromSupabase(id)
+      setTournament(snapshot.tournament)
+      setUmpires(snapshot.umpires)
+    } catch {
+      setError('Could not load the selected tournament.')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const games = useMemo(() => tournament?.days.flatMap(day => day.games) ?? [], [tournament])
   const assignments = useMemo(() => tournament?.days.flatMap(day => day.assignments) ?? [], [tournament])
@@ -94,10 +119,26 @@ export default function AnalysisPage() {
         <div>
           <div className="brand">DIAMOND • OFFICIATING</div>
           <h1>Analysis</h1>
-          <p>Read-only analysis of the current tournament's saved umpire allocations.</p>
+          <p>Read-only analysis of saved umpire allocations.</p>
         </div>
         <a href="/dashboard">← Dashboard</a>
       </header>
+
+      <section className="selector-card">
+        <label htmlFor="analysis-tournament">Tournament</label>
+        <select
+          id="analysis-tournament"
+          value={selectedTournamentId}
+          onChange={event => void selectTournament(event.target.value)}
+          disabled={!tournaments.length}
+        >
+          {!tournaments.length && <option value="">No tournaments available</option>}
+          {tournaments.map(item => (
+            <option key={item.id} value={item.id}>{item.name}</option>
+          ))}
+        </select>
+        {selectedTournamentId && <span>{tournaments.find(t => t.id === selectedTournamentId)?.status === 'completed' ? 'Completed' : 'Active'}</span>}
+      </section>
 
       <nav className="tabs" aria-label="Analysis reports">
         <button className={report === 'pairings' ? 'active' : ''} onClick={() => setReport('pairings')}>
@@ -198,6 +239,10 @@ export default function AnalysisPage() {
         h1{margin:5px 0;font-size:30px}
         header p{color:#6d7e86;font-size:13px;margin:6px 0 0}
         header a{color:#1587b2;text-decoration:none;font-weight:600;font-size:13px;white-space:nowrap}
+        .selector-card{margin:16px 5% 0;background:#fff;border:1px solid #dce4e8;border-radius:8px;padding:14px 16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+        .selector-card label{font-size:11px;text-transform:uppercase;letter-spacing:.7px;color:#536771;font-weight:800}
+        .selector-card select{min-width:280px;border:1px solid #cbd6dc;border-radius:6px;background:#fff;padding:9px 12px;color:#1c2b33;font-size:13px}
+        .selector-card span{font-size:11px;color:#71828a}
         .tabs{margin:16px 5% 0;display:flex;gap:6px}
         .tabs button{border:1px solid #cbd6dc;background:#fff;border-radius:7px;padding:10px 14px;color:#536771;font-weight:700;cursor:pointer}
         .tabs button.active{background:#1587b2;color:#fff;border-color:#1587b2}
@@ -218,7 +263,7 @@ export default function AnalysisPage() {
         .matrix td.diagonal{color:#9aa7ad;font-weight:400;background:#f9fafb}
         .empty{padding:35px 15px;text-align:center;color:#71828a;background:#f8fafb;border:1px dashed #cbd6dc;border-radius:7px}
         .read-only{text-align:center;color:#829097;font-size:11px;margin:18px 5%}
-        @media(max-width:700px){header{padding:20px 4%}.tabs,.summary,.card{margin-left:4%;margin-right:4%}.card{padding:16px}.summary div{flex:1;min-width:100px}}
+        @media(max-width:700px){header{padding:20px 4%}.selector-card,.tabs,.summary,.card{margin-left:4%;margin-right:4%}.selector-card select{min-width:0;flex:1}.card{padding:16px}.summary div{flex:1;min-width:100px}}
       `}</style>
     </main>
   )
