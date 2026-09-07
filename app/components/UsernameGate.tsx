@@ -82,7 +82,7 @@ export default function UsernameGate({ children }: { children: React.ReactNode }
     <main className="identity-shell">
       <section className="identity-card">
         <div className="identity-brand">DIAMOND • OFFICIATING</div>
-        <h1>Softball Umpire AI</h1>
+        <h1>Softball Umpire Allocator</h1>
         <p className="identity-copy">Enter your username to continue.</p>
         <form onSubmit={submit}>
           <label htmlFor="username">Username</label>
